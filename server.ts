@@ -11,9 +11,14 @@ app.use(express.json({ limit: "15mb" }));
 app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 
 // Database directory setup
-const dbDir = path.join(process.cwd(), "database");
+const isVercel = Boolean(process.env.VERCEL);
+const dbDir = isVercel ? "/tmp" : path.join(process.cwd(), "database");
 if (!fs.existsSync(dbDir)) {
-  fs.mkdirSync(dbDir, { recursive: true });
+  try {
+    fs.mkdirSync(dbDir, { recursive: true });
+  } catch (err) {
+    console.warn("Notice: could not create database directory:", err);
+  }
 }
 const dbFilePath = path.join(dbDir, "lost_found.db");
 
@@ -27,7 +32,7 @@ function saveDatabase() {
       fs.writeFileSync(dbFilePath, buffer);
     }
   } catch (err) {
-    console.error("Failed to save SQLite database:", err);
+    console.warn("Failed to persist SQLite database (read-only environment):", err);
   }
 }
 
@@ -231,9 +236,28 @@ function calculateMatchScore(lostItem: any, foundItem: any) {
 // ----------------------------------------------------
 async function initDatabase() {
   const SQL = await initSqlJs();
+  let fileBuffer: Buffer | null = null;
+
   if (fs.existsSync(dbFilePath)) {
     try {
-      const fileBuffer = fs.readFileSync(dbFilePath);
+      fileBuffer = fs.readFileSync(dbFilePath);
+    } catch {
+      fileBuffer = null;
+    }
+  } else {
+    // In serverless / Vercel, load initial seed data from project database directory
+    const repoDbPath = path.join(process.cwd(), "database", "lost_found.db");
+    if (fs.existsSync(repoDbPath)) {
+      try {
+        fileBuffer = fs.readFileSync(repoDbPath);
+      } catch {
+        fileBuffer = null;
+      }
+    }
+  }
+
+  if (fileBuffer) {
+    try {
       db = new SQL.Database(fileBuffer);
     } catch {
       db = new SQL.Database();
@@ -1009,6 +1033,8 @@ app.get("*", (req, res) => {
   res.sendFile(path.join(frontendDir, "index.html"));
 });
 
+export { app, initDatabase };
+
 async function start() {
   await initDatabase();
   app.listen(PORT, "0.0.0.0", () => {
@@ -1016,4 +1042,7 @@ async function start() {
   });
 }
 
-start();
+// Automatically start standalone dev/prod server when not in a serverless environment (like Vercel)
+if (!process.env.VERCEL) {
+  start();
+}

@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Search Items - Smart Student Lost &amp; Found</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="navbar"></header>
+
+  <main class="main-content">
+    <div class="page-header">
+      <h1 class="page-title">Search Campus Items</h1>
+      <p class="page-subtitle">Filter through active lost and found reports across campus locations, categories, and dates.</p>
+    </div>
+
+    <!-- Search & Filter Card -->
+    <div class="search-filter-card">
+      <form id="search-form">
+        <div class="filter-grid">
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" for="search-name">Item Name or Keyword</label>
+            <input type="text" id="search-name" class="form-control" placeholder="e.g. ID Card, Calculator, Keys, Dell...">
+          </div>
+
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" for="search-category">Category</label>
+            <select id="search-category" class="form-control">
+              <option value="All">All Categories</option>
+              <option value="ID Card">ID Card</option>
+              <option value="Electronics">Electronics</option>
+              <option value="Bag">Bag</option>
+              <option value="Keys">Keys</option>
+              <option value="Wallet">Wallet</option>
+              <option value="Water Bottle">Water Bottle</option>
+              <option value="Books">Books</option>
+              <option value="Certificates">Certificates</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" for="search-location">Location</label>
+            <input type="text" id="search-location" class="form-control" placeholder="e.g. Canteen, Library...">
+          </div>
+
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" for="search-date">Date</label>
+            <input type="date" id="search-date" class="form-control">
+          </div>
+
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" for="search-status">Status</label>
+            <select id="search-status" class="form-control">
+              <option value="All">All Statuses</option>
+              <option value="Lost">Lost</option>
+              <option value="Found">Found</option>
+              <option value="Possible Match">Possible Match</option>
+              <option value="Match Verified">Match Verified</option>
+              <option value="Resolved">Resolved</option>
+              <option value="Closed">Closed</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:1.25rem; flex-wrap:wrap; gap:1rem;">
+          <div style="display:flex; align-items:center; gap:0.5rem;">
+            <span style="font-size:0.85rem; font-weight:600; color:var(--text-subtle);">Item Type:</span>
+            <label style="display:inline-flex; align-items:center; gap:0.25rem; font-size:0.9rem; cursor:pointer;">
+              <input type="radio" name="item_type" value="all" checked> All
+            </label>
+            <label style="display:inline-flex; align-items:center; gap:0.25rem; font-size:0.9rem; cursor:pointer;">
+              <input type="radio" name="item_type" value="lost"> Lost Only
+            </label>
+            <label style="display:inline-flex; align-items:center; gap:0.25rem; font-size:0.9rem; cursor:pointer;">
+              <input type="radio" name="item_type" value="found"> Found Only
+            </label>
+          </div>
+
+          <div style="display:flex; gap:0.75rem;">
+            <button type="button" id="reset-btn" class="btn btn-secondary btn-sm">Reset Filters</button>
+            <button type="submit" class="btn btn-primary btn-sm">Search Records</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- Results Header -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
+      <h2 style="font-size:1.2rem; font-weight:700; color:var(--text-main);">
+        Search Results (<span id="results-count">0</span> items)
+      </h2>
+      <a href="matches.html" class="btn btn-secondary btn-sm">View System Possible Matches &rarr;</a>
+    </div>
+
+    <!-- Items Grid Container -->
+    <div id="search-results" class="items-grid">
+      <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--text-muted);">
+        Loading items...
+      </div>
+    </div>
+  </main>
+
+  <script src="js/app.js"></script>
+  <script>
+    renderHeader('search');
+    renderFooter();
+
+    const form = document.getElementById("search-form");
+    const resultsContainer = document.getElementById("search-results");
+    const countDisplay = document.getElementById("results-count");
+    const resetBtn = document.getElementById("reset-btn");
+
+    // In-memory cache to prevent quote escaping issues with JSON in HTML attributes
+    window.__searchItemsCache = {};
+
+    let searchDebounceTimer = null;
+    function triggerDebouncedSearch() {
+      clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = setTimeout(() => {
+        performSearch();
+      }, 200);
+    }
+
+    async function performSearch() {
+      const name = document.getElementById("search-name").value.trim();
+      const category = document.getElementById("search-category").value;
+      const location = document.getElementById("search-location").value.trim();
+      const date = document.getElementById("search-date").value;
+      const status = document.getElementById("search-status").value;
+      const itemType = document.querySelector('input[name="item_type"]:checked')?.value || "all";
+
+      const params = new URLSearchParams();
+      if (name) params.append("q", name);
+      if (category && category !== "All") params.append("category", category);
+      if (location) params.append("location", location);
+      if (date) params.append("date", date);
+      if (status && status !== "All") params.append("status", status);
+      if (itemType && itemType !== "all") params.append("item_type", itemType);
+
+      resultsContainer.innerHTML = `<div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--text-muted);">Searching campus records...</div>`;
+
+      try {
+        const items = await apiFetch(`/items/search?${params.toString()}`);
+        countDisplay.textContent = items.length;
+
+        // Populate cache
+        window.__searchItemsCache = {};
+        items.forEach(item => {
+          window.__searchItemsCache[item.id] = item;
+        });
+
+        if (items.length === 0) {
+          resultsContainer.innerHTML = `
+            <div class="empty-state" style="grid-column: 1/-1;">
+              <span class="empty-icon">🔍</span>
+              <h3>No matching items found</h3>
+              <p>Try broadening your keywords or clearing location/date filters.</p>
+              <button class="btn btn-secondary btn-sm" style="margin-top: 1rem;" onclick="resetAllFilters()">Reset All Filters</button>
+            </div>
+          `;
+          return;
+        }
+
+        resultsContainer.innerHTML = items.map(item => {
+          const isLost = item.item_type === "lost";
+          const typeBadge = isLost 
+            ? `<span class="badge badge-lost">Lost</span>` 
+            : `<span class="badge badge-found">Found</span>`;
+
+          let statusBadgeClass = "badge-resolved";
+          if (item.status === "Lost") statusBadgeClass = "badge-lost";
+          if (item.status === "Found") statusBadgeClass = "badge-found";
+          if (item.status === "Possible Match") statusBadgeClass = "badge-possible-match";
+          if (item.status === "Match Verified") statusBadgeClass = "badge-verified";
+
+          return `
+            <div class="card" style="border-top: 3px solid ${isLost ? 'var(--danger)' : 'var(--primary)'};">
+              <div class="card-header">
+                <div>
+                  <div style="display:flex; gap:0.4rem; margin-bottom:0.35rem;">
+                    ${typeBadge}
+                    <span class="badge ${statusBadgeClass}">Status: ${escapeHtml(item.status)}</span>
+                  </div>
+                  <h3 class="card-title">${escapeHtml(item.item_name)}</h3>
+                </div>
+              </div>
+
+              <div class="card-meta">
+                <span class="meta-item">📁 Category: <strong>${escapeHtml(item.category)}</strong></span>
+                <span class="meta-item">📍 Location: <strong>${escapeHtml(item.location)}</strong></span>
+                <span class="meta-item">📅 Date: <strong>${escapeHtml(item.date)}</strong></span>
+              </div>
+
+              <p class="card-description">
+                ${escapeHtml(item.description)}
+              </p>
+
+              <div class="card-footer">
+                <span style="font-size:0.8rem; color:var(--text-subtle);">Item #${item.id}</span>
+                <div style="display:flex; gap:0.5rem; flex-wrap: wrap;">
+                  <button class="btn btn-secondary btn-sm" onclick="showItemModal(window.__searchItemsCache[${item.id}])">
+                    [View Details]
+                  </button>
+                  ${item.status === 'Possible Match' ? `
+                    <button class="btn btn-primary btn-sm" onclick="openMatchModalForReport(${item.id})">
+                      🎯 Review Match
+                    </button>
+                  ` : ''}
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+      } catch (err) {
+        resultsContainer.innerHTML = `
+          <div class="alert alert-danger" style="grid-column: 1/-1;">
+            Failed to search items: ${escapeHtml(err.message)}
+          </div>
+        `;
+      }
+    }
+
+    function resetAllFilters() {
+      document.getElementById("search-name").value = "";
+      document.getElementById("search-category").value = "All";
+      document.getElementById("search-location").value = "";
+      document.getElementById("search-date").value = "";
+      document.getElementById("search-status").value = "All";
+      const radioAll = document.querySelector('input[name="item_type"][value="all"]');
+      if (radioAll) radioAll.checked = true;
+      if (window.history.replaceState) {
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+      performSearch();
+    }
+
+    // Event Listeners for Instant Live Search
+    document.getElementById("search-name").addEventListener("input", triggerDebouncedSearch);
+    document.getElementById("search-location").addEventListener("input", triggerDebouncedSearch);
+    document.getElementById("search-category").addEventListener("change", performSearch);
+    document.getElementById("search-status").addEventListener("change", performSearch);
+    document.getElementById("search-date").addEventListener("change", performSearch);
+
+    document.querySelectorAll('input[name="item_type"]').forEach(radio => {
+      radio.addEventListener("change", performSearch);
+    });
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      clearTimeout(searchDebounceTimer);
+      performSearch();
+    });
+
+    resetBtn.addEventListener("click", resetAllFilters);
+
+    // Read URL Search Parameters on Load (e.g. from homepage or external links)
+    const urlParams = new URLSearchParams(window.location.search);
+    const qParam = urlParams.get("q") || urlParams.get("keyword") || urlParams.get("name");
+    const catParam = urlParams.get("category");
+    const locParam = urlParams.get("location");
+    const dateParam = urlParams.get("date");
+    const statusParam = urlParams.get("status");
+    const typeParam = urlParams.get("item_type");
+
+    if (qParam) document.getElementById("search-name").value = qParam;
+    if (catParam) document.getElementById("search-category").value = catParam;
+    if (locParam) document.getElementById("search-location").value = locParam;
+    if (dateParam) document.getElementById("search-date").value = dateParam;
+    if (statusParam) document.getElementById("search-status").value = statusParam;
+    if (typeParam) {
+      const radio = document.querySelector(`input[name="item_type"][value="${typeParam}"]`);
+      if (radio) radio.checked = true;
+    }
+
+    // Run initial search
+    performSearch();
+  </script>
+</body>
+</html>

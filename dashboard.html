@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Dashboard - Smart Student Lost &amp; Found</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="navbar"></header>
+
+  <main class="main-content">
+    <!-- Welcome Header -->
+    <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <h1 class="page-title">
+          Welcome, <span id="user-display-name">Student</span>
+        </h1>
+        <p class="page-subtitle" id="user-display-email">Track your campus lost and found submissions, monitor status updates, and verify matches.</p>
+      </div>
+
+      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+        <button class="btn btn-secondary btn-sm" onclick="loadDashboard()">🔄 Refresh</button>
+        <a href="report-lost.html" class="btn btn-danger btn-sm">+ Report Lost</a>
+        <a href="report-found.html" class="btn btn-primary btn-sm">+ Report Found</a>
+      </div>
+    </div>
+
+    <!-- Student Profile Switcher Bar -->
+    <div id="student-switcher-container"></div>
+
+    <!-- User Dashboard Counters (Per Section 8) -->
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="stat-icon lost">🚨</div>
+        <div>
+          <div class="stat-label">My Lost Reports</div>
+          <div id="stat-my-lost" class="stat-number">0</div>
+        </div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-icon found">📦</div>
+        <div>
+          <div class="stat-label">My Found Reports</div>
+          <div id="stat-my-found" class="stat-number">0</div>
+        </div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-icon match">🤝</div>
+        <div>
+          <div class="stat-label">Possible Matches</div>
+          <div id="stat-my-matches" class="stat-number">0</div>
+        </div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-icon resolved">✅</div>
+        <div>
+          <div class="stat-label">Resolved Cases</div>
+          <div id="stat-my-resolved" class="stat-number">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Match Notice if any -->
+    <div id="dashboard-match-notice" style="display: none; margin-bottom: 2rem;"></div>
+
+    <!-- Section 7: Status Tracking & My Reports -->
+    <div class="card" style="margin-bottom: 2.5rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 0.75rem;">
+        <div>
+          <h2 style="font-size: 1.3rem; font-weight: 700; color: var(--text-main);">My Reports &amp; Status Tracking</h2>
+          <p style="font-size: 0.9rem; color: var(--text-muted);">Real-time tracking of all your campus submissions.</p>
+        </div>
+
+        <div style="display: flex; gap: 0.5rem; align-items: center;">
+          <label for="filter-type" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">Filter:</label>
+          <select id="filter-type" class="form-control" style="width: auto; padding: 0.35rem 0.75rem;" onchange="handleFilterChange()">
+            <option value="my_all">My Reports (All)</option>
+            <option value="my_lost">My Lost Items</option>
+            <option value="my_found">My Found Items</option>
+            <option value="campus_all">🌐 All Campus Submissions (Global)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Reports Table / Card List -->
+      <div id="my-reports-list">
+        <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+          Loading your campus reports...
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/app.js"></script>
+  <script>
+    renderHeader('dashboard');
+    renderFooter();
+
+    let cachedReports = [];
+    let allUsers = [];
+
+    async function initUserSwitcher() {
+      try {
+        allUsers = await apiFetch("/users");
+        renderUserSwitcher();
+      } catch (err) {
+        console.error("Failed to fetch users:", err);
+      }
+    }
+
+    function renderUserSwitcher() {
+      const container = document.getElementById("student-switcher-container");
+      if (!container || !allUsers || allUsers.length === 0) return;
+      const current = AppState.currentUser;
+
+      container.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; background: #f8fafc; border: 1px solid var(--border-subtle); padding: 0.6rem 1rem; border-radius: var(--radius-md); margin-bottom: 1.5rem;">
+          <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">
+              ${current ? 'Active Student Account:' : 'Quick Sign In as Demo Student:'}
+            </span>
+            ${allUsers.map(u => {
+              const isCurrent = current && Number(u.id) === Number(current.id);
+              return `
+                <button 
+                  type="button"
+                  onclick="switchStudentProfile(${u.id})"
+                  class="btn btn-sm ${isCurrent ? 'btn-primary' : 'btn-secondary'}"
+                  style="font-size: 0.8rem; padding: 0.25rem 0.65rem;"
+                  title="${escapeHtml(u.email)}"
+                >
+                  ${isCurrent ? '👤 ✓ ' : '👤 '}${escapeHtml(u.name)} (#${u.id})
+                </button>
+              `;
+            }).join('')}
+          </div>
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            ${current ? `
+              <button class="btn btn-secondary btn-sm" onclick="AppState.logout()" style="font-size: 0.8rem; padding: 0.25rem 0.6rem;">
+                Sign Out
+              </button>
+            ` : `
+              <a href="login.html" class="btn btn-primary btn-sm" style="font-size: 0.8rem; padding: 0.25rem 0.65rem;">Sign In</a>
+              <a href="register.html" class="btn btn-secondary btn-sm" style="font-size: 0.8rem; padding: 0.25rem 0.65rem;">Register</a>
+            `}
+          </div>
+        </div>
+      `;
+    }
+
+    function switchStudentProfile(userId) {
+      const target = allUsers.find(u => Number(u.id) === Number(userId));
+      if (target) {
+        AppState.setUser(target);
+        showToast(`Switched account to ${target.name}`);
+        renderUserSwitcher();
+        loadDashboard();
+      }
+    }
+
+    async function loadDashboard() {
+      AppState.initUser();
+      const user = AppState.currentUser;
+      const notice = document.getElementById("dashboard-match-notice");
+
+      if (!user) {
+        document.getElementById("user-display-name").textContent = "Campus Lost & Found Portal";
+        document.getElementById("user-display-email").innerHTML = `
+          You are currently in guest mode. <a href="login.html" style="font-weight:600; text-decoration:underline;">Sign in</a> or <a href="register.html" style="font-weight:600; text-decoration:underline;">register a new student account</a> to manage your personal reports.
+        `;
+
+        try {
+          const stats = await apiFetch("/stats");
+          document.getElementById("stat-my-lost").textContent = stats.my_lost_reports;
+          document.getElementById("stat-my-found").textContent = stats.my_found_reports;
+          document.getElementById("stat-my-matches").textContent = stats.possible_matches;
+          document.getElementById("stat-my-resolved").textContent = stats.resolved_cases;
+
+          notice.className = "alert alert-info";
+          notice.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; width:100%; flex-wrap:wrap; gap:0.5rem;">
+              <div>
+                <strong>👋 Welcome to the Campus Lost &amp; Found Portal!</strong>
+                <div>Sign in to view your personal submitted items, track claims, and verify smart match suggestions.</div>
+              </div>
+              <div style="display:flex; gap:0.5rem;">
+                <a href="login.html" class="btn btn-primary btn-sm">Sign In</a>
+                <a href="register.html" class="btn btn-secondary btn-sm">Create Account</a>
+              </div>
+            </div>
+          `;
+          notice.style.display = "block";
+
+          cachedReports = await apiFetch("/my-reports?user_id=all");
+          renderMyReports();
+        } catch (err) {
+          console.error("Dashboard guest load error:", err);
+        }
+        return;
+      }
+
+      document.getElementById("user-display-name").textContent = user.name;
+      document.getElementById("user-display-email").textContent = `Logged in as: ${user.email} (Student ID: #${user.id})`;
+
+      try {
+        // Fetch stats for this user
+        const stats = await apiFetch(`/stats?user_id=${user.id}`);
+        document.getElementById("stat-my-lost").textContent = stats.my_lost_reports;
+        document.getElementById("stat-my-found").textContent = stats.my_found_reports;
+        document.getElementById("stat-my-matches").textContent = stats.possible_matches;
+        document.getElementById("stat-my-resolved").textContent = stats.resolved_cases;
+
+        if (stats.possible_matches > 0) {
+          notice.className = "alert alert-warning";
+          notice.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; width:100%; flex-wrap:wrap; gap:0.5rem;">
+              <div>
+                <strong>🎯 You have ${stats.possible_matches} possible match suggestion(s)!</strong>
+                <div>Our smart matching system found campus items matching your reports.</div>
+              </div>
+              <a href="matches.html" class="btn btn-primary btn-sm">Review Matches Now &rarr;</a>
+            </div>
+          `;
+          notice.style.display = "block";
+        } else {
+          notice.style.display = "none";
+        }
+
+        // Fetch reports
+        const filterVal = document.getElementById("filter-type").value;
+        if (filterVal === "campus_all") {
+          cachedReports = await apiFetch("/my-reports?user_id=all");
+        } else {
+          cachedReports = await apiFetch(`/my-reports?user_id=${user.id}`);
+        }
+        renderMyReports();
+
+      } catch (err) {
+        console.error("Dashboard error:", err);
+      }
+    }
+
+    function handleFilterChange() {
+      const filterVal = document.getElementById("filter-type").value;
+      if (filterVal === "campus_all") {
+        loadDashboard();
+      } else {
+        renderMyReports();
+      }
+    }
+
+    function showAllCampus() {
+      document.getElementById("filter-type").value = "campus_all";
+      loadDashboard();
+    }
+
+    function renderMyReports() {
+      const filter = document.getElementById("filter-type").value;
+      const container = document.getElementById("my-reports-list");
+      const user = AppState.currentUser || { id: 1, name: "Alex Johnson" };
+
+      let filtered = cachedReports;
+      if (filter === "my_lost") {
+        filtered = cachedReports.filter(r => r.item_type === "lost");
+      } else if (filter === "my_found") {
+        filtered = cachedReports.filter(r => r.item_type === "found");
+      }
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <span class="empty-icon">📂</span>
+            <h3>No reports found for ${escapeHtml(user.name)}</h3>
+            <p style="color: var(--text-muted); margin-bottom: 0.75rem;">
+              There are no submissions currently filed under Student ID #${user.id}.
+            </p>
+            <div style="margin-bottom: 1rem;">
+              <button class="btn btn-secondary btn-sm" onclick="showAllCampus()">
+                🌐 View All Campus Submissions (Global Feed)
+              </button>
+            </div>
+            <div style="display: flex; justify-content: center; gap: 0.75rem; flex-wrap: wrap;">
+              <a href="report-lost.html" class="btn btn-danger btn-sm">Report Lost Item</a>
+              <a href="report-found.html" class="btn btn-primary btn-sm">Report Found Item</a>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = `
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+          ${filtered.map(item => {
+            const isLost = item.item_type === "lost";
+            const typeBadge = isLost 
+              ? `<span class="badge badge-lost">Lost</span>` 
+              : `<span class="badge badge-found">Found</span>`;
+
+            let statusBadgeClass = "badge-resolved";
+            if (item.status === "Lost") statusBadgeClass = "badge-lost";
+            if (item.status === "Found") statusBadgeClass = "badge-found";
+            if (item.status === "Possible Match") statusBadgeClass = "badge-possible-match";
+            if (item.status === "Match Verified") statusBadgeClass = "badge-verified";
+
+            return `
+              <div style="border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1.25rem; background: #ffffff; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                <div style="max-width: 600px;">
+                  <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem;">
+                    ${typeBadge}
+                    <span class="badge ${statusBadgeClass}">Status: ${escapeHtml(item.status)}</span>
+                    <span style="font-size: 0.8rem; color: var(--text-subtle);">Report #${item.id}</span>
+                  </div>
+
+                  <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-main); margin-bottom: 0.25rem;">
+                    ${escapeHtml(item.item_name)}
+                  </h3>
+
+                  <div style="font-size: 0.85rem; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 1rem;">
+                    <span>📁 ${escapeHtml(item.category)}</span>
+                    <span>📍 ${escapeHtml(item.location)}</span>
+                    <span>📅 ${escapeHtml(item.date)}</span>
+                    ${item.contact_info ? `<span>📞 ${escapeHtml(item.contact_info)}</span>` : ''}
+                  </div>
+                </div>
+
+                <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                  <button class="btn btn-secondary btn-sm" onclick='showItemModal(${JSON.stringify(item)})'>
+                    View Details
+                  </button>
+
+                  ${item.status === 'Possible Match' ? `
+                    <button class="btn btn-primary btn-sm" onclick="openMatchModalForReport(${item.id})">
+                      🎯 View &amp; Confirm Match
+                    </button>
+                    <a href="matches.html?item_id=${item.id}" class="btn btn-secondary btn-sm">
+                      Matches Page &rarr;
+                    </a>
+                  ` : ''}
+
+                  ${item.status === 'Match Verified' ? `
+                    <button class="btn btn-primary btn-sm" onclick="openMatchModalForReport(${item.id})">
+                      📞 View Verified Contacts
+                    </button>
+                    <button class="btn btn-success btn-sm" onclick="markAsResolved(${item.id})">
+                      Mark as Resolved
+                    </button>
+                  ` : ''}
+
+                  ${item.status !== 'Closed' && item.status !== 'Resolved' ? `
+                    <button class="btn btn-secondary btn-sm" style="color: var(--text-subtle);" onclick="closeReport(${item.id})">
+                      Close
+                    </button>
+                  ` : ''}
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    function markAsResolved(itemId) {
+      showCustomConfirm({
+        title: "Mark Belonging as Resolved",
+        message: "Confirm that this belonging has been safely returned to its owner? This will mark the report as Resolved and complete the case.",
+        confirmText: "Yes, Mark Resolved",
+        confirmClass: "btn-success",
+        onConfirm: async () => {
+          try {
+            await apiFetch(`/items/${itemId}/resolve`, {
+              method: "POST",
+              body: JSON.stringify({ status: "Resolved" })
+            });
+            showToast("Report marked as Resolved!");
+            loadDashboard();
+          } catch (err) {
+            showToast("Failed to update status: " + err.message, "danger");
+          }
+        }
+      });
+    }
+
+    function closeReport(itemId) {
+      showCustomConfirm({
+        title: "Close Report",
+        message: "Close this report? It will no longer search for potential matches.",
+        confirmText: "Yes, Close Report",
+        confirmClass: "btn-danger",
+        onConfirm: async () => {
+          try {
+            await apiFetch(`/items/${itemId}/resolve`, {
+              method: "POST",
+              body: JSON.stringify({ status: "Closed" })
+            });
+            showToast("Report closed.");
+            loadDashboard();
+          } catch (err) {
+            showToast("Failed to close report: " + err.message, "danger");
+          }
+        }
+      });
+    }
+
+    initUserSwitcher();
+    loadDashboard();
+  </script>
+</body>
+</html>

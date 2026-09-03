@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interview &amp; Architecture Guide - Smart Student Lost &amp; Found</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="navbar"></header>
+
+  <main class="main-content">
+    <div class="page-header">
+      <div class="badge" style="background:#eff6ff; color:var(--primary); font-size:0.85rem; margin-bottom:0.5rem;">
+        🎓 Project Presentation &amp; Viva Companion
+      </div>
+      <h1 class="page-title">Architecture &amp; Interview Guide</h1>
+      <p class="page-subtitle">
+        Everything a student developer needs to explain the architecture, SQLite schema, REST API design, and 100-point explainable matching algorithm during project defense or software engineering interviews.
+      </p>
+    </div>
+
+    <!-- Quick Interview Elevator Pitch Card -->
+    <div class="card" style="border-left: 4px solid var(--primary); margin-bottom: 2rem;">
+      <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--primary); margin-bottom: 0.75rem;">
+        🎙️ 60-Second Interview Pitch (Say This to the Interviewer)
+      </h2>
+      <div style="display: flex; flex-direction: column; gap: 0.75rem; font-size: 0.95rem; color: var(--text-main);">
+        <p><strong>Problem:</strong> “Students frequently lose ID cards, calculators, keys, and bags on campus, while found-item notices are scattered across social media or WhatsApp groups.”</p>
+        <p><strong>Solution:</strong> “I built a centralized web application that allows students to report lost belongings or register found items, and automatically pairs them using an explainable smart matching engine.”</p>
+        <p><strong>Smart Matching:</strong> “Instead of using complex or unpredictable AI, I engineered a transparent 100-point weighted similarity algorithm that scores Category (30pts), Item Name (25pts), Location (20pts), Date Proximity (15pts), and Description keywords (10pts).”</p>
+        <p><strong>Tech Stack:</strong> “I used pure HTML, CSS, and Vanilla JavaScript for the frontend, Python FastAPI with Pydantic for validation on the backend, and SQLite for lightweight relational storage.”</p>
+        <p><strong>Key Takeaway:</strong> “I gained end-to-end understanding of client-server communication, RESTful status codes, relational database normalization, deterministic scoring algorithms, and full-stack state management.”</p>
+      </div>
+    </div>
+
+    <!-- Interactive Algorithm Simulator -->
+    <div class="card" style="margin-bottom: 2.5rem;">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:0.5rem; margin-bottom:1rem;">
+        <div>
+          <h2 style="font-size: 1.3rem; font-weight: 700; color: var(--text-main);">
+            ⚡ Interactive Match Score Simulator
+          </h2>
+          <p style="font-size:0.9rem; color:var(--text-muted);">
+            Test how the 100-point formula calculates score between any sample Lost and Found report.
+          </p>
+        </div>
+        <div style="display:flex; gap:0.5rem;">
+          <button class="btn btn-secondary btn-sm" onclick="loadSamplePreset('canteen')">Preset: Canteen ID Card (90%)</button>
+          <button class="btn btn-secondary btn-sm" onclick="loadSamplePreset('library')">Preset: Library Calculator (83%)</button>
+          <button class="btn btn-secondary btn-sm" onclick="loadSamplePreset('mismatch')">Preset: Different Category (0%)</button>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.25rem;">
+        <!-- Lost Item Input -->
+        <div style="background:#f8fafc; border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:1rem;">
+          <div style="font-weight:700; color:var(--danger); font-size:0.9rem; margin-bottom:0.75rem;">LOST ITEM REPORT</div>
+          <div class="form-group" style="margin-bottom:0.5rem;">
+            <label class="form-label" style="font-size:0.8rem;">Category</label>
+            <input type="text" id="sim-lost-cat" class="form-control" value="ID Card">
+          </div>
+          <div class="form-group" style="margin-bottom:0.5rem;">
+            <label class="form-label" style="font-size:0.8rem;">Item Name</label>
+            <input type="text" id="sim-lost-name" class="form-control" value="Blue College ID Card">
+          </div>
+          <div class="form-group" style="margin-bottom:0.5rem;">
+            <label class="form-label" style="font-size:0.8rem;">Location</label>
+            <input type="text" id="sim-lost-loc" class="form-control" value="Canteen">
+          </div>
+          <div class="form-group" style="margin-bottom:0.5rem;">
+            <label class="form-label" style="font-size:0.8rem;">Date</label>
+            <input type="date" id="sim-lost-date" class="form-control" value="2026-09-02">
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" style="font-size:0.8rem;">Description</label>
+            <input type="text" id="sim-lost-desc" class="form-control" value="Blue lanyard with mechanical engineering student ID">
+          </div>
+        </div>
+
+        <!-- Found Item Input -->
+        <div style="background:#f8fafc; border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:1rem;">
+          <div style="font-weight:700; color:var(--success); font-size:0.9rem; margin-bottom:0.75rem;">FOUND ITEM REPORT</div>
+          <div class="form-group" style="margin-bottom:0.5rem;">
+            <label class="form-label" style="font-size:0.8rem;">Category</label>
+            <input type="text" id="sim-found-cat" class="form-control" value="ID Card">
+          </div>
+          <div class="form-group" style="margin-bottom:0.5rem;">
+            <label class="form-label" style="font-size:0.8rem;">Item Name</label>
+            <input type="text" id="sim-found-name" class="form-control" value="College ID Card">
+          </div>
+          <div class="form-group" style="margin-bottom:0.5rem;">
+            <label class="form-label" style="font-size:0.8rem;">Location</label>
+            <input type="text" id="sim-found-loc" class="form-control" value="Near Canteen">
+          </div>
+          <div class="form-group" style="margin-bottom:0.5rem;">
+            <label class="form-label" style="font-size:0.8rem;">Date</label>
+            <input type="date" id="sim-found-date" class="form-control" value="2026-09-02">
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" style="font-size:0.8rem;">Description</label>
+            <input type="text" id="sim-found-desc" class="form-control" value="Student ID with blue ribbon found near canteen table">
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:center; margin-bottom:1.25rem;">
+        <button class="btn btn-primary" onclick="calculateSimulation()">
+          Calculate Live Match Score &rarr;
+        </button>
+      </div>
+
+      <!-- Live Calculation Result -->
+      <div id="sim-result" style="background:#ffffff; border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:1.25rem;">
+        <!-- Populated dynamically -->
+      </div>
+    </div>
+
+    <!-- Database Design Schema Section -->
+    <div class="card" style="margin-bottom: 2.5rem;">
+      <h2 style="font-size: 1.3rem; font-weight: 700; color: var(--text-main); margin-bottom: 1rem;">
+        🗄️ Relational Database Design (SQLite)
+      </h2>
+      <p style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+        The system models three core entities in Third Normal Form (3NF) to eliminate redundancy:
+      </p>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.25rem;">
+        <div style="background:#f8fafc; border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:1rem;">
+          <h3 style="font-size:1.05rem; font-weight:700; color:var(--primary); margin-bottom:0.5rem;">1. `users` Table</h3>
+          <ul style="list-style:disc inside; font-size:0.85rem; color:var(--text-muted); line-height:1.7;">
+            <li><code>id</code> INTEGER PRIMARY KEY AUTOINCREMENT</li>
+            <li><code>name</code> TEXT (Full name of student/staff)</li>
+            <li><code>email</code> TEXT UNIQUE (Campus email identity)</li>
+            <li><code>password</code> TEXT (Salted SHA-256 hash)</li>
+            <li><code>phone</code> TEXT (Optional contact phone)</li>
+            <li><code>created_at</code> TIMESTAMP</li>
+          </ul>
+        </div>
+
+        <div style="background:#f8fafc; border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:1rem;">
+          <h3 style="font-size:1.05rem; font-weight:700; color:var(--primary); margin-bottom:0.5rem;">2. `items` Table</h3>
+          <ul style="list-style:disc inside; font-size:0.85rem; color:var(--text-muted); line-height:1.7;">
+            <li><code>id</code> INTEGER PRIMARY KEY AUTOINCREMENT</li>
+            <li><code>user_id</code> INTEGER (Foreign Key &rarr; users.id)</li>
+            <li><code>item_type</code> TEXT ('lost' or 'found')</li>
+            <li><code>category</code> TEXT (ID Card, Keys, Books, etc.)</li>
+            <li><code>item_name</code> TEXT (Descriptive item title)</li>
+            <li><code>description</code> TEXT (Details, color, contents)</li>
+            <li><code>location</code> TEXT (Campus building / area)</li>
+            <li><code>date</code> TEXT (YYYY-MM-DD)</li>
+            <li><code>status</code> TEXT (Lost, Found, Possible Match, etc.)</li>
+          </ul>
+        </div>
+
+        <div style="background:#f8fafc; border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:1rem;">
+          <h3 style="font-size:1.05rem; font-weight:700; color:var(--primary); margin-bottom:0.5rem;">3. `matches` Table</h3>
+          <ul style="list-style:disc inside; font-size:0.85rem; color:var(--text-muted); line-height:1.7;">
+            <li><code>id</code> INTEGER PRIMARY KEY AUTOINCREMENT</li>
+            <li><code>lost_item_id</code> INTEGER (Foreign Key &rarr; items.id)</li>
+            <li><code>found_item_id</code> INTEGER (Foreign Key &rarr; items.id)</li>
+            <li><code>match_score</code> INTEGER (0 to 100 percentage)</li>
+            <li><code>score_breakdown</code> TEXT (JSON breakdown)</li>
+            <li><code>status</code> TEXT ('Suggested', 'Confirmed', 'Rejected')</li>
+            <li><code>created_at</code> TIMESTAMP</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- Python FastAPI Code Viewer -->
+    <div class="card" style="margin-bottom: 2.5rem;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
+        <div>
+          <h2 style="font-size: 1.3rem; font-weight: 700; color: var(--text-main);">
+            🐍 Python FastAPI Backend Code
+          </h2>
+          <p style="font-size:0.9rem; color:var(--text-muted);">
+            Explore the clean, modular Python codebase written in <code>/backend</code>.
+          </p>
+        </div>
+        <div style="display:flex; gap:0.5rem;">
+          <button class="btn btn-secondary btn-sm" onclick="showCodeTab('matching')">matching.py</button>
+          <button class="btn btn-secondary btn-sm" onclick="showCodeTab('models')">models.py</button>
+          <button class="btn btn-secondary btn-sm" onclick="showCodeTab('main')">main.py</button>
+        </div>
+      </div>
+
+      <pre id="code-viewer" style="background:#0f172a; color:#e2e8f0; padding:1.25rem; border-radius:var(--radius-md); font-family:monospace; font-size:0.85rem; overflow-x:auto; max-height:400px; line-height:1.5;"></pre>
+    </div>
+
+    <!-- Common Interview Questions & Answers -->
+    <div class="card">
+      <h2 style="font-size: 1.3rem; font-weight: 700; color: var(--text-main); margin-bottom: 1.25rem;">
+        💬 Technical Interview Q&amp;A Cheatsheet
+      </h2>
+
+      <div style="display:flex; flex-direction:column; gap:1.25rem;">
+        <div>
+          <h3 style="font-size:1.05rem; font-weight:700; color:var(--primary); margin-bottom:0.25rem;">
+            Q1: Why did you choose SQLite over MongoDB or PostgreSQL?
+          </h3>
+          <p style="font-size:0.95rem; color:var(--text-muted);">
+            “For a single-campus system, SQLite is zero-configuration, serverless, and stores everything in a self-contained disk file (<code>lost_found.db</code>). It supports standard ACID transactions and relational SQL foreign keys without the operational overhead, connection pooling, or memory footprint of external database servers.”
+          </p>
+        </div>
+
+        <div>
+          <h3 style="font-size:1.05rem; font-weight:700; color:var(--primary); margin-bottom:0.25rem;">
+            Q2: Why use a weighted heuristic algorithm instead of an AI embedding model?
+          </h3>
+          <p style="font-size:0.95rem; color:var(--text-muted);">
+            “Explainability and determinism. When a student asks why their lost ID card was matched with a found report, we can show the exact breakdown: 30 points for category match, 25 points for item name similarity, 20 points for location proximity. It requires zero cloud API latency, zero cost, and eliminates hallucinated false matches.”
+          </p>
+        </div>
+
+        <div>
+          <h3 style="font-size:1.05rem; font-weight:700; color:var(--primary); margin-bottom:0.25rem;">
+            Q3: How does your system prevent duplicate matches?
+          </h3>
+          <p style="font-size:0.95rem; color:var(--text-muted);">
+            “Whenever a new item is submitted, the matching engine runs an existence check on the <code>matches</code> table using composite keys (<code>lost_item_id</code>, <code>found_item_id</code>). Furthermore, resolved or closed reports are excluded from the candidate pool.”
+          </p>
+        </div>
+
+        <div>
+          <h3 style="font-size:1.05rem; font-weight:700; color:var(--primary); margin-bottom:0.25rem;">
+            Q4: How do you handle security and sensitive student information?
+          </h3>
+          <p style="font-size:0.95rem; color:var(--text-muted);">
+            “Passwords are never stored in plain text; we use salted SHA-256 hashes. In addition, detailed contact information is shielded until a match is officially confirmed between the two parties, preventing unsolicited contact.”
+          </p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/app.js"></script>
+  <script>
+    renderHeader('interview');
+    renderFooter();
+
+    // Presets for simulator
+    function loadSamplePreset(type) {
+      if (type === 'canteen') {
+        document.getElementById('sim-lost-cat').value = "ID Card";
+        document.getElementById('sim-lost-name').value = "Blue College ID Card";
+        document.getElementById('sim-lost-loc').value = "Canteen";
+        document.getElementById('sim-lost-date').value = "2026-09-02";
+        document.getElementById('sim-lost-desc').value = "Blue lanyard with mechanical engineering student ID card";
+
+        document.getElementById('sim-found-cat').value = "ID Card";
+        document.getElementById('sim-found-name').value = "College ID Card";
+        document.getElementById('sim-found-loc').value = "Near Canteen";
+        document.getElementById('sim-found-date').value = "2026-09-02";
+        document.getElementById('sim-found-desc').value = "Student ID with blue ribbon found near canteen table";
+      } else if (type === 'library') {
+        document.getElementById('sim-lost-cat').value = "Electronics";
+        document.getElementById('sim-lost-name').value = "Casio FX-991EX Calculator";
+        document.getElementById('sim-lost-loc').value = "Library 2nd Floor";
+        document.getElementById('sim-lost-date').value = "2026-09-01";
+        document.getElementById('sim-lost-desc').value = "Scientific calculator with silver sliding case";
+
+        document.getElementById('sim-found-cat').value = "Electronics";
+        document.getElementById('sim-found-name').value = "Casio Scientific Calculator";
+        document.getElementById('sim-found-loc').value = "Central Library";
+        document.getElementById('sim-found-date').value = "2026-09-01";
+        document.getElementById('sim-found-desc').value = "Casio calculator left on study desk";
+      } else {
+        document.getElementById('sim-lost-cat').value = "Wallet";
+        document.getElementById('sim-lost-name').value = "Brown Leather Wallet";
+        document.getElementById('sim-lost-loc').value = "Gymnasium";
+        document.getElementById('sim-lost-date').value = "2026-08-25";
+        document.getElementById('sim-lost-desc').value = "Contains driver license";
+
+        document.getElementById('sim-found-cat').value = "Keys";
+        document.getElementById('sim-found-name').value = "Bike Keys";
+        document.getElementById('sim-found-loc').value = "Parking Lot";
+        document.getElementById('sim-found-date').value = "2026-09-02";
+        document.getElementById('sim-found-desc').value = "Single key with red ring";
+      }
+      calculateSimulation();
+    }
+
+    async function calculateSimulation() {
+      const lostItem = {
+        category: document.getElementById('sim-lost-cat').value,
+        item_name: document.getElementById('sim-lost-name').value,
+        location: document.getElementById('sim-lost-loc').value,
+        date: document.getElementById('sim-lost-date').value,
+        description: document.getElementById('sim-lost-desc').value
+      };
+
+      const foundItem = {
+        category: document.getElementById('sim-found-cat').value,
+        item_name: document.getElementById('sim-found-name').value,
+        location: document.getElementById('sim-found-loc').value,
+        date: document.getElementById('sim-found-date').value,
+        description: document.getElementById('sim-found-desc').value
+      };
+
+      try {
+        const res = await apiFetch("/match-calculator", {
+          method: "POST",
+          body: JSON.stringify({ lost_item: lostItem, found_item: foundItem })
+        });
+
+        const b = res.breakdown;
+        const resultContainer = document.getElementById("sim-result");
+
+        let badgeBg = "#fffbeb";
+        let badgeColor = "#92400e";
+        if (res.totalScore >= 80) {
+          badgeBg = "#ecfdf5";
+          badgeColor = "#065f46";
+        } else if (res.totalScore < 50) {
+          badgeBg = "#fef2f2";
+          badgeColor = "#991b1b";
+        }
+
+        resultContainer.innerHTML = `
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:1rem; border-bottom:1px solid var(--border-subtle); padding-bottom:1rem;">
+            <div>
+              <div style="font-size:0.85rem; font-weight:700; color:var(--text-subtle); text-transform:uppercase;">Simulation Output</div>
+              <h3 style="font-size:1.3rem; font-weight:700; color:var(--text-main);">
+                ${res.totalScore >= 50 ? '🎯 Possible Match Detected!' : '❌ Not a Match (Below 50% Threshold)'}
+              </h3>
+            </div>
+            <div style="background:${badgeBg}; color:${badgeColor}; font-size:1.25rem; font-weight:800; padding:0.5rem 1.25rem; border-radius:var(--radius-pill); border:1px solid currentColor;">
+              Match Score: ${res.totalScore}%
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:0.75rem; margin-bottom:1rem;">
+            <div style="background:#f8fafc; padding:0.75rem; border-radius:var(--radius-sm); text-align:center; border:1px solid var(--border-subtle);">
+              <div style="font-size:1.15rem; font-weight:700; color:var(--primary);">${b.category_points}/30</div>
+              <div style="font-size:0.8rem; color:var(--text-subtle);">Category</div>
+            </div>
+            <div style="background:#f8fafc; padding:0.75rem; border-radius:var(--radius-sm); text-align:center; border:1px solid var(--border-subtle);">
+              <div style="font-size:1.15rem; font-weight:700; color:var(--primary);">${b.name_points}/25</div>
+              <div style="font-size:0.8rem; color:var(--text-subtle);">Item Name</div>
+            </div>
+            <div style="background:#f8fafc; padding:0.75rem; border-radius:var(--radius-sm); text-align:center; border:1px solid var(--border-subtle);">
+              <div style="font-size:1.15rem; font-weight:700; color:var(--primary);">${b.location_points}/20</div>
+              <div style="font-size:0.8rem; color:var(--text-subtle);">Location</div>
+            </div>
+            <div style="background:#f8fafc; padding:0.75rem; border-radius:var(--radius-sm); text-align:center; border:1px solid var(--border-subtle);">
+              <div style="font-size:1.15rem; font-weight:700; color:var(--primary);">${b.date_points}/15</div>
+              <div style="font-size:0.8rem; color:var(--text-subtle);">Date Gap</div>
+            </div>
+            <div style="background:#f8fafc; padding:0.75rem; border-radius:var(--radius-sm); text-align:center; border:1px solid var(--border-subtle);">
+              <div style="font-size:1.15rem; font-weight:700; color:var(--primary);">${b.description_points}/10</div>
+              <div style="font-size:0.8rem; color:var(--text-subtle);">Description</div>
+            </div>
+          </div>
+
+          <div style="background:#f8fafc; padding:1rem; border-radius:var(--radius-sm);">
+            <div style="font-size:0.85rem; font-weight:700; color:var(--text-main); margin-bottom:0.35rem;">Point-by-Point Justification:</div>
+            <ul style="list-style:disc inside; font-size:0.85rem; color:var(--text-muted); line-height:1.6;">
+              ${b.explanations.map(e => `<li>${escapeHtml(e)}</li>`).join('')}
+            </ul>
+          </div>
+        `;
+
+      } catch (err) {
+        document.getElementById("sim-result").innerHTML = `<div class="alert alert-danger">Error: ${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    const codeSnippets = {
+      matching: `# Explainable 100-Point Matching Algorithm
+def calculate_match_score(lost_item, found_item):
+    # 1. Category Match (30 pts)
+    cat_pts = 30 if lost_item.category.lower() == found_item.category.lower() else 0
+    
+    # 2. Item Name Match (25 pts)
+    # Exact match: 25 pts, substring match: 20 pts, token overlap: proportional
+    name_pts = evaluate_name_similarity(lost_item.item_name, found_item.item_name)
+    
+    # 3. Location Similarity (20 pts)
+    # Exact location: 20 pts, zone overlap: 10-15 pts
+    loc_pts = evaluate_location(lost_item.location, found_item.location)
+    
+    # 4. Date Proximity (15 pts)
+    # 0 day gap: 15 pts | <= 2 days: 12 pts | <= 5 days: 8 pts
+    date_pts = evaluate_date_gap(lost_item.date, found_item.date)
+    
+    # 5. Description Overlap (10 pts)
+    desc_pts = evaluate_keywords(lost_item.description, found_item.description)
+    
+    total = min(100, cat_pts + name_pts + loc_pts + date_pts + desc_pts)
+    return total, breakdown`,
+
+      models: `# SQLAlchemy SQLite Models
+class Item(Base):
+    __tablename__ = "items"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    item_type = Column(String(20))   # 'lost' or 'found'
+    category = Column(String(50))
+    item_name = Column(String(150))
+    description = Column(Text)
+    location = Column(String(120))
+    date = Column(String(30))
+    status = Column(String(50), default="Lost")
+
+class Match(Base):
+    __tablename__ = "matches"
+    id = Column(Integer, primary_key=True)
+    lost_item_id = Column(Integer, ForeignKey("items.id"))
+    found_item_id = Column(Integer, ForeignKey("items.id"))
+    match_score = Column(Integer)
+    status = Column(String(30), default="Suggested")`,
+
+      main: `# FastAPI Endpoint Example
+@app.post("/items/lost", response_model=ItemOut, status_code=201)
+def report_lost_item(item_in: ItemCreate, user_id: int, db: Session = Depends(get_db)):
+    item = Item(
+        user_id=user_id,
+        item_type="lost",
+        category=item_in.category,
+        item_name=item_in.item_name,
+        location=item_in.location,
+        date=item_in.date,
+        description=item_in.description,
+        status="Lost"
+    )
+    db.add(item)
+    db.commit()
+    
+    # Trigger matching engine against active found items
+    trigger_matching_engine(item, db)
+    return item`
+    };
+
+    function showCodeTab(tab) {
+      document.getElementById("code-viewer").textContent = codeSnippets[tab] || "";
+    }
+
+    // Initial load
+    showCodeTab('matching');
+    calculateSimulation();
+  </script>
+</body>
+</html>
