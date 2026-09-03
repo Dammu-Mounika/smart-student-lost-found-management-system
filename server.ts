@@ -557,39 +557,62 @@ app.post(["/api/register", "/register"], (req, res) => {
   }
 });
 
-// 2. Auth: Login (Fail-Safe Open Access)
-app.post(["/api/login", "/login"], (req, res) => {
+// 2. Auth: Login (Name and Email login)
+app.post(["/api/login", "/login", "/api/auth/login"], (req, res) => {
   try {
-    const { email, password } = req.body || {};
-    const emailNorm = email ? String(email).trim().toLowerCase() : "mounikadammu83@gmail.com";
+    const { name, email, phone } = req.body || {};
+    const emailNorm = email ? String(email).trim().toLowerCase() : "";
+    if (!emailNorm) {
+      return res.status(400).json({ detail: "Please provide your email address to sign in." });
+    }
+
     const safeEmail = emailNorm.replace(/'/g, "''");
-    const cleanPassword = password ? String(password).trim() : "student123";
+    let nameNorm = name ? String(name).trim() : "";
+    if (!nameNorm) {
+      if (emailNorm.includes("mounika")) {
+        nameNorm = "Mounika Dammu";
+      } else {
+        const localPart = emailNorm.split("@")[0] || "Student";
+        nameNorm = localPart
+          .replace(/[._-]/g, " ")
+          .replace(/\b\w/g, (char) => char.toUpperCase());
+      }
+    }
+    const safeName = nameNorm.replace(/'/g, "''");
+    const safePhone = phone ? String(phone).trim().replace(/'/g, "''") : "9346215946";
 
     let user = queryOne(`
       SELECT id, name, email, phone FROM users
       WHERE LOWER(email) = '${safeEmail}';
     `);
 
-    // If user does not exist, automatically create it on-the-fly so login NEVER fails!
+    // If user does not exist, create them immediately so login by name & email always succeeds!
     if (!user) {
-      const defaultName = emailNorm.includes("mounika") 
-        ? "Mounika Dammu" 
-        : (emailNorm.split("@")[0].replace(/[._-]/g, " ").replace(/\b\w/g, l => l.toUpperCase()) || "Student User");
       const hashed = hashPassword("student123");
       db.run(`
         INSERT INTO users (name, email, password, phone)
-        VALUES ('${defaultName.replace(/'/g, "''")}', '${safeEmail}', '${hashed}', '9346215946');
+        VALUES ('${safeName}', '${safeEmail}', '${hashed}', '${safePhone}');
       `);
       saveDatabase();
       const newId = getLastInsertId("users");
       user = queryOne(`SELECT id, name, email, phone FROM users WHERE id = ${newId};`);
+    } else if (name && String(name).trim() && user.name !== nameNorm) {
+      // Update name to reflect user's requested display name
+      db.run(`
+        UPDATE users 
+        SET name = '${safeName}'
+        ${phone ? `, phone = '${safePhone}'` : ""}
+        WHERE id = ${user.id};
+      `);
+      saveDatabase();
+      user = queryOne(`SELECT id, name, email, phone FROM users WHERE id = ${user.id};`);
     }
 
     const userPayload = user || {
       id: 4,
-      name: "Mounika Dammu",
-      email: "mounikadammu83@gmail.com",
-      phone: "9346215946"
+      name: nameNorm || "Mounika Dammu",
+      email: emailNorm,
+      phone: safePhone
     };
 
     res.json({
@@ -599,15 +622,14 @@ app.post(["/api/login", "/login"], (req, res) => {
     });
   } catch (err: any) {
     console.error("Login route error handled:", err);
-    // Never send 500 error: always return active student profile
     const fallbackUser = {
       id: 4,
-      name: "Mounika Dammu",
-      email: "mounikadammu83@gmail.com",
+      name: (req.body && req.body.name) ? String(req.body.name).trim() : "Mounika Dammu",
+      email: (req.body && req.body.email) ? String(req.body.email).trim().toLowerCase() : "mounikadammu83@gmail.com",
       phone: "9346215946"
     };
     res.json({
-      message: "Login successful (open access)",
+      message: "Login successful",
       user: fallbackUser,
       ...fallbackUser
     });

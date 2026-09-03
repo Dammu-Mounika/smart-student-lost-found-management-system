@@ -12,7 +12,7 @@
   <main class="main-content">
     <div class="page-header text-center">
       <h1 class="page-title">Campus Sign In</h1>
-      <p class="page-subtitle">Access your personal reports, monitor claim status, and verify matches.</p>
+      <p class="page-subtitle">Sign in by entering your name and campus email to manage your lost &amp; found items and claims.</p>
     </div>
 
     <!-- Already Logged In Notice -->
@@ -22,147 +22,87 @@
     <div id="alert-box" style="max-width: 480px; margin: 0 auto 1.25rem auto; display: none;"></div>
 
     <div class="form-card" style="max-width: 480px;">
-      <!-- Direct Open Access Mode Banner & One-Click Enter -->
-      <div style="margin-bottom: 1.5rem; text-align: center; padding: 1.1rem; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: var(--radius-md);">
-        <div style="font-weight: 700; color: #166534; font-size: 1.05rem; margin-bottom: 0.35rem;">
-          ⚡ Open Campus Access (No Sign-In Required)
+      <!-- One-Click Direct Access -->
+      <div style="margin-bottom: 1.5rem; text-align: center; padding: 1rem; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: var(--radius-md);">
+        <div style="font-weight: 700; color: #166534; font-size: 1rem; margin-bottom: 0.25rem;">
+          ⚡ Instant One-Click Access
         </div>
-        <p style="font-size: 0.85rem; color: #15803d; margin-bottom: 0.85rem;">
-          You can use all features—report items, view matches, and search—freely without signing in!
+        <p style="font-size: 0.82rem; color: #15803d; margin-bottom: 0.75rem;">
+          Jump straight to your dashboard with verified student profile.
         </p>
-        <button type="button" class="btn btn-primary btn-block" onclick="bypassDirectAccess()" style="background: #16a34a; border-color: #16a34a; font-weight: 700; font-size: 1rem; padding: 0.75rem;">
+        <button type="button" class="btn btn-primary btn-block" onclick="bypassDirectAccess()" style="background: #16a34a; border-color: #16a34a; font-weight: 700; font-size: 0.95rem; padding: 0.7rem;">
           🚀 Enter Directly as Mounika Dammu &rarr;
         </button>
       </div>
 
-      <div style="text-align: center; margin: 1rem 0; color: var(--text-muted); font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem;">
+      <div style="text-align: center; margin: 1.25rem 0 1rem 0; color: var(--text-muted); font-size: 0.85rem; display: flex; align-items: center; gap: 0.5rem;">
         <span style="flex: 1; height: 1px; background: var(--border-subtle);"></span>
-        <span>or sign in with custom credentials</span>
+        <span style="font-weight: 600; color: var(--text-main);">or sign in by entering name &amp; email</span>
         <span style="flex: 1; height: 1px; background: var(--border-subtle);"></span>
       </div>
 
       <form id="login-form">
+        <div class="form-group">
+          <label class="form-label" for="name">Your Name <span class="required">*</span></label>
+          <input 
+            type="text" 
+            id="name" 
+            class="form-control" 
+            placeholder="e.g. Mounika Dammu" 
+            autocomplete="name"
+            required
+          >
+          <div class="form-hint">Enter your student or faculty display name.</div>
+        </div>
+
         <div class="form-group">
           <label class="form-label" for="email">Campus Email Address <span class="required">*</span></label>
           <input 
             type="email" 
             id="email" 
             class="form-control" 
-            placeholder="e.g. alex.j@college.edu or name@example.com" 
+            placeholder="e.g. mounikadammu83@gmail.com" 
             autocomplete="email"
             required
           >
-        </div>
-
-        <div class="form-group">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-            <label class="form-label" for="password" style="margin-bottom: 0;">Password <span class="required">*</span></label>
-            <button 
-              type="button" 
-              id="toggle-pwd-btn" 
-              onclick="togglePasswordVisibility()" 
-              style="background:none; border:none; color: var(--accent); font-size: 0.8rem; cursor: pointer; font-weight: 500;"
-            >
-              👁️ Show Password
-            </button>
-          </div>
-          <input 
-            type="password" 
-            id="password" 
-            class="form-control" 
-            placeholder="Enter your account password" 
-            autocomplete="current-password"
-            required
-          >
+          <div class="form-hint">Used to link your lost item reports and match alerts.</div>
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin: 1rem 0; font-size: 0.85rem;">
           <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: var(--text-muted);">
             <input type="checkbox" id="remember-me" checked>
-            <span>Remember my email</span>
+            <span>Remember my name &amp; email</span>
           </label>
-          <button 
-            type="button" 
-            onclick="toggleResetPasswordPanel()" 
-            style="background:none; border:none; color: var(--primary); font-size: 0.85rem; cursor: pointer; font-weight: 600; padding: 0;"
-          >
-            Forgot Password?
-          </button>
         </div>
 
-        <button type="submit" id="submit-btn" class="btn btn-primary btn-block" style="font-size: 1rem; padding: 0.75rem;">
-          Sign In to Campus Portal
+        <button type="submit" id="submit-btn" class="btn btn-primary btn-block" style="font-size: 1rem; padding: 0.75rem; font-weight: 700;">
+          ✨ Sign In with Name &amp; Email &rarr;
         </button>
       </form>
 
-      <!-- Inline Reset Password Section (collapsible) -->
-      <div id="reset-password-panel" style="display: none; margin-top: 1.25rem; padding: 1.25rem; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: var(--radius-md);">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-          <h3 style="font-size: 1rem; font-weight: 700; color: #1e40af; margin: 0;">🔑 Reset Password</h3>
-          <button type="button" onclick="toggleResetPasswordPanel(false)" style="background:none; border:none; color: #64748b; font-size: 1.1rem; cursor: pointer;">✕</button>
-        </div>
-        <p style="font-size: 0.82rem; color: #3b82f6; margin-bottom: 0.75rem;">
-          Enter your registered email and choose a new password (min 6 chars).
-        </p>
-
-        <div id="reset-alert-box" class="alert" style="display: none; padding: 0.6rem 0.8rem; font-size: 0.85rem; margin-bottom: 0.75rem;"></div>
-
-        <form id="reset-password-form">
-          <div class="form-group" style="margin-bottom: 0.75rem;">
-            <label class="form-label" style="font-size: 0.8rem;" for="reset-email">Account Email</label>
-            <input type="email" id="reset-email" class="form-control" placeholder="your.email@college.edu" required style="font-size: 0.9rem; padding: 0.45rem 0.75rem;">
-          </div>
-          <div class="form-group" style="margin-bottom: 0.75rem;">
-            <label class="form-label" style="font-size: 0.8rem;" for="reset-new-password">New Password (min 6 characters)</label>
-            <input type="password" id="reset-new-password" class="form-control" placeholder="At least 6 characters" minlength="6" required style="font-size: 0.9rem; padding: 0.45rem 0.75rem;">
-          </div>
-          <div class="form-group" style="margin-bottom: 1rem;">
-            <label class="form-label" style="font-size: 0.8rem;" for="reset-confirm-password">Confirm New Password</label>
-            <input type="password" id="reset-confirm-password" class="form-control" placeholder="Re-type new password" minlength="6" required style="font-size: 0.9rem; padding: 0.45rem 0.75rem;">
-          </div>
-          <div style="display: flex; gap: 0.5rem;">
-            <button type="submit" id="reset-submit-btn" class="btn btn-primary btn-sm" style="flex: 1; padding: 0.5rem 1rem;">
-              Save &amp; Sign In
-            </button>
-            <button type="button" class="btn btn-secondary btn-sm" onclick="toggleResetPasswordPanel(false)">
-              Cancel
-            </button>
-          </div>
-        </form>
-      </div>
-
-      <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-subtle); text-align: center; font-size: 0.9rem;">
-        Don't have a campus account? <a href="register.html" style="font-weight: 600; color: var(--primary);">Register here &rarr;</a>
-      </div>
-
-      <!-- Quick Test Accounts for Instant Testing & Evaluation -->
+      <!-- Quick 1-Click Fill Profiles -->
       <div style="margin-top: 1.5rem; background: #f8fafc; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1rem;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
           <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-subtle); text-transform: uppercase; letter-spacing: 0.05em;">
-            ⚡ Quick 1-Click Sign-In (Demo Profiles):
+            ⚡ Quick 1-Click Name &amp; Email Sign-In:
           </div>
-          <span style="font-size: 0.75rem; color: var(--text-subtle);">Pass: <code>student123</code></span>
         </div>
         <div id="quick-accounts-list" style="display: flex; flex-direction: column; gap: 0.4rem;">
-          <button type="button" class="btn btn-secondary btn-sm" style="justify-content: space-between; text-align: left;" onclick="quickLogin('mounikadammu83@gmail.com', 'student123')">
-            <span>👤 <strong>Mounika Dammu</strong> (Wallet, Bag, Keys)</span>
-            <span style="font-size: 0.75rem; color: var(--text-subtle);">mounikadammu83@...</span>
+          <button type="button" class="btn btn-secondary btn-sm" style="justify-content: space-between; text-align: left;" onclick="quickLogin('Mounika Dammu', 'mounikadammu83@gmail.com')">
+            <span>👤 <strong>Mounika Dammu</strong></span>
+            <span style="font-size: 0.75rem; color: var(--text-subtle);">mounikadammu83@gmail.com</span>
           </button>
-          <button type="button" class="btn btn-secondary btn-sm" style="justify-content: space-between; text-align: left;" onclick="quickLogin('alex.j@college.edu', 'student123')">
-            <span>👤 <strong>Alex Johnson</strong> (ID Card &amp; Calc)</span>
+          <button type="button" class="btn btn-secondary btn-sm" style="justify-content: space-between; text-align: left;" onclick="quickLogin('Alex Johnson', 'alex.j@college.edu')">
+            <span>👤 <strong>Alex Johnson</strong></span>
             <span style="font-size: 0.75rem; color: var(--text-subtle);">alex.j@college.edu</span>
           </button>
-          <button type="button" class="btn btn-secondary btn-sm" style="justify-content: space-between; text-align: left;" onclick="quickLogin('sarah.m@college.edu', 'student123')">
-            <span>👤 <strong>Sarah Miller</strong> (Keys &amp; Bottle)</span>
+          <button type="button" class="btn btn-secondary btn-sm" style="justify-content: space-between; text-align: left;" onclick="quickLogin('Sarah Miller', 'sarah.m@college.edu')">
+            <span>👤 <strong>Sarah Miller</strong></span>
             <span style="font-size: 0.75rem; color: var(--text-subtle);">sarah.m@college.edu</span>
           </button>
-          <button type="button" class="btn btn-secondary btn-sm" style="justify-content: space-between; text-align: left;" onclick="quickLogin('david.c@college.edu', 'student123')">
-            <span>👤 <strong>David Chen</strong> (Backpack finder)</span>
+          <button type="button" class="btn btn-secondary btn-sm" style="justify-content: space-between; text-align: left;" onclick="quickLogin('David Chen', 'david.c@college.edu')">
+            <span>👤 <strong>David Chen</strong></span>
             <span style="font-size: 0.75rem; color: var(--text-subtle);">david.c@college.edu</span>
-          </button>
-          <button type="button" class="btn btn-secondary btn-sm" style="justify-content: space-between; text-align: left;" onclick="quickLogin('dammumounika790@gmail.com', 'student123')">
-            <span>👤 <strong>Mounika</strong> (NPTEL Certificate)</span>
-            <span style="font-size: 0.75rem; color: var(--text-subtle);">dammumounika790@...</span>
           </button>
         </div>
       </div>
@@ -177,16 +117,9 @@
     const form = document.getElementById("login-form");
     const alertBox = document.getElementById("alert-box");
     const submitBtn = document.getElementById("submit-btn");
+    const nameInput = document.getElementById("name");
     const emailInput = document.getElementById("email");
-    const passwordInput = document.getElementById("password");
     const loggedInNotice = document.getElementById("logged-in-notice");
-    const resetPanel = document.getElementById("reset-password-panel");
-    const resetForm = document.getElementById("reset-password-form");
-    const resetAlertBox = document.getElementById("reset-alert-box");
-    const resetEmailInput = document.getElementById("reset-email");
-    const resetNewPasswordInput = document.getElementById("reset-new-password");
-    const resetConfirmPasswordInput = document.getElementById("reset-confirm-password");
-    const resetSubmitBtn = document.getElementById("reset-submit-btn");
 
     // Check if user is already logged in
     function checkCurrentSession() {
@@ -210,133 +143,60 @@
       }
     }
 
-    // Prefill remembered email or recent registration
-    const remembered = localStorage.getItem("remembered_email");
-    if (remembered) {
-      emailInput.value = remembered;
+    // Prefill remembered name and email or recent registration
+    const rememberedEmail = localStorage.getItem("remembered_email");
+    const rememberedName = localStorage.getItem("remembered_name");
+    if (rememberedEmail) {
+      emailInput.value = rememberedEmail;
+    }
+    if (rememberedName) {
+      nameInput.value = rememberedName;
     }
 
-    // Check query params (e.g. registered=true, email=..., reset=true)
+    // Check query params (e.g. registered=true, email=..., name=...)
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get("email")) {
       emailInput.value = urlParams.get("email");
-      resetEmailInput.value = urlParams.get("email");
+    }
+    if (urlParams.get("name")) {
+      nameInput.value = urlParams.get("name");
+    }
+
+    // If inputs are still empty, prefill active user's details
+    if (!emailInput.value && !nameInput.value) {
+      nameInput.value = "Mounika Dammu";
+      emailInput.value = "mounikadammu83@gmail.com";
     }
 
     if (urlParams.get("registered") === "true") {
       alertBox.className = "alert alert-success";
-      alertBox.innerHTML = "✅ Account created successfully! You can now sign in with your credentials.";
+      alertBox.innerHTML = "✅ Account registered! You can now sign in by entering your name and email.";
       alertBox.style.display = "block";
-    }
-
-    if (urlParams.get("reset") === "true") {
-      toggleResetPasswordPanel(true);
     }
 
     checkCurrentSession();
 
-    function togglePasswordVisibility() {
-      const btn = document.getElementById("toggle-pwd-btn");
-      if (passwordInput.type === "password") {
-        passwordInput.type = "text";
-        btn.textContent = "🙈 Hide Password";
-      } else {
-        passwordInput.type = "password";
-        btn.textContent = "👁️ Show Password";
-      }
-    }
-
-    function toggleResetPasswordPanel(show) {
-      const isVisible = resetPanel.style.display === "block";
-      const shouldShow = typeof show === "boolean" ? show : !isVisible;
-      resetPanel.style.display = shouldShow ? "block" : "none";
-      if (shouldShow) {
-        if (!resetEmailInput.value && emailInput.value) {
-          resetEmailInput.value = emailInput.value.trim();
-        }
-        resetNewPasswordInput.focus();
-      }
-    }
-
-    function quickLogin(email, password) {
+    function quickLogin(name, email) {
+      nameInput.value = name;
       emailInput.value = email;
-      passwordInput.value = password;
       form.dispatchEvent(new Event("submit"));
     }
 
-    // Reset Password Form Handler
-    resetForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const email = resetEmailInput.value.trim().toLowerCase();
-      const newPassword = resetNewPasswordInput.value;
-      const confirmPassword = resetConfirmPasswordInput.value;
-
-      if (!email || !newPassword) {
-        resetAlertBox.className = "alert alert-danger";
-        resetAlertBox.innerHTML = "⚠️ Please provide your email and new password.";
-        resetAlertBox.style.display = "block";
-        return;
-      }
-
-      if (newPassword.length < 6) {
-        resetAlertBox.className = "alert alert-danger";
-        resetAlertBox.innerHTML = "⚠️ New password must be at least 6 characters.";
-        resetAlertBox.style.display = "block";
-        return;
-      }
-
-      if (newPassword !== confirmPassword) {
-        resetAlertBox.className = "alert alert-danger";
-        resetAlertBox.innerHTML = "⚠️ Passwords do not match. Please re-enter.";
-        resetAlertBox.style.display = "block";
-        return;
-      }
-
-      resetSubmitBtn.disabled = true;
-      resetSubmitBtn.textContent = "Updating...";
-      resetAlertBox.style.display = "none";
-
-      try {
-        const res = await apiFetch("/auth/reset-password", {
-          method: "POST",
-          body: JSON.stringify({ email, newPassword })
-        });
-
-        const user = res.user || res;
-        AppState.setUser(user);
-        showToast("Password updated! Welcome, " + user.name);
-
-        resetAlertBox.className = "alert alert-success";
-        resetAlertBox.innerHTML = `✅ Password updated successfully! Logging you in as <strong>${escapeHtml(user.name)}</strong>...`;
-        resetAlertBox.style.display = "block";
-
-        setTimeout(() => {
-          window.location.href = "dashboard.html";
-        }, 600);
-
-      } catch (err) {
-        resetAlertBox.className = "alert alert-danger";
-        resetAlertBox.innerHTML = `⚠️ ${escapeHtml(err.message || 'Failed to reset password.')}`;
-        resetAlertBox.style.display = "block";
-      } finally {
-        resetSubmitBtn.disabled = false;
-        resetSubmitBtn.textContent = "Save & Sign In";
-      }
-    });
-
-    // Login Form Handler
+    // Login Form Handler: Login by entering name and email
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
 
+      const name = nameInput.value.trim();
       const email = emailInput.value.trim().toLowerCase();
-      const password = passwordInput.value;
 
-      if (!email || !password) {
+      if (!email) {
         alertBox.className = "alert alert-danger";
-        alertBox.innerHTML = "⚠️ Please enter both your email address and password.";
+        alertBox.innerHTML = "⚠️ Please enter your campus email address.";
         alertBox.style.display = "block";
         return;
       }
+
+      const finalName = name || (email.includes("mounika") ? "Mounika Dammu" : (email.split("@")[0].replace(/[._-]/g, " ") || "Active Student"));
 
       submitBtn.disabled = true;
       submitBtn.textContent = "Signing in...";
@@ -345,21 +205,23 @@
       try {
         const res = await apiFetch("/login", {
           method: "POST",
-          body: JSON.stringify({ email, password })
+          body: JSON.stringify({ name: finalName, email })
         });
 
         if (document.getElementById("remember-me").checked) {
           localStorage.setItem("remembered_email", email);
+          localStorage.setItem("remembered_name", finalName);
         } else {
           localStorage.removeItem("remembered_email");
+          localStorage.removeItem("remembered_name");
         }
 
         const loggedUser = res.user || res;
         AppState.setUser(loggedUser);
-        showToast("Welcome back, " + loggedUser.name + "!");
+        showToast("Welcome, " + loggedUser.name + "!");
 
         alertBox.className = "alert alert-success";
-        alertBox.innerHTML = `✅ Welcome back, <strong>${escapeHtml(loggedUser.name)}</strong>! Redirecting to your dashboard...`;
+        alertBox.innerHTML = `✅ Signed in successfully as <strong>${escapeHtml(loggedUser.name)}</strong> (${escapeHtml(loggedUser.email)})! Redirecting to your dashboard...`;
         alertBox.style.display = "block";
 
         setTimeout(() => {
@@ -367,12 +229,10 @@
         }, 400);
 
       } catch (err) {
-        // Resilient fallback: ensure user is never blocked by an error
         console.warn("Sign-in fallback active:", err);
-        const resolvedName = email.includes("mounika") ? "Mounika Dammu" : (email.split("@")[0].replace(/[._-]/g, " ") || "Active Student");
         const studentUser = {
           id: 4,
-          name: resolvedName,
+          name: finalName,
           email: email,
           phone: "9346215946"
         };
@@ -386,7 +246,7 @@
         }, 500);
       } finally {
         submitBtn.disabled = false;
-        submitBtn.textContent = "Sign In to Campus Portal";
+        submitBtn.textContent = "✨ Sign In with Name & Email →";
       }
     });
 

@@ -107,6 +107,25 @@ const AppState = {
           <span>👤</span>
           <span>${escapeHTML(user.name)}</span>
         </a>
+        <a
+          href="login.html"
+          title="Sign in by entering name and email"
+          style="
+            font-size:0.8rem;
+            padding:0.35rem 0.65rem;
+            background:var(--bg-card);
+            border:1px solid var(--border-subtle);
+            border-radius:var(--radius-md);
+            color:var(--text-muted);
+            text-decoration:none;
+            display:inline-flex;
+            align-items:center;
+            gap:0.3rem;
+          "
+        >
+          <span>🔑</span>
+          <span>Sign In / Switch</span>
+        </a>
       </div>
     `;
   },
