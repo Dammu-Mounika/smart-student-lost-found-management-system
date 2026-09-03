@@ -108,8 +108,9 @@
         </button>
       </form>
 
-      <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-subtle); text-align: center; font-size: 0.9rem;">
-        Already registered? <a href="login.html" style="font-weight: 600; color: var(--primary);">Sign in here &rarr;</a>
+      <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-subtle); text-align: center; font-size: 0.9rem; display: flex; flex-direction: column; gap: 0.4rem;">
+        <div>Already registered? <a href="login.html" style="font-weight: 600; color: var(--primary);">Sign in here &rarr;</a></div>
+        <div style="font-size: 0.85rem; color: var(--text-muted);">Forgot your password? <a href="login.html?reset=true" style="font-weight: 600; color: var(--accent);">Reset password &rarr;</a></div>
       </div>
     </div>
   </main>
@@ -122,9 +123,18 @@
     const form = document.getElementById("register-form");
     const alertBox = document.getElementById("alert-box");
     const submitBtn = document.getElementById("submit-btn");
+    const nameInput = document.getElementById("name");
+    const emailInput = document.getElementById("email");
+    const phoneInput = document.getElementById("phone");
     const passwordInput = document.getElementById("password");
     const confirmPasswordInput = document.getElementById("confirm-password");
     const loggedInNotice = document.getElementById("logged-in-notice");
+
+    // Check query params for prefilled email
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("email")) {
+      emailInput.value = urlParams.get("email");
+    }
 
     // Check existing login
     if (AppState.currentUser) {
@@ -150,20 +160,20 @@
 
     function prefillSampleStudent() {
       const randId = Math.floor(100 + Math.random() * 900);
-      document.getElementById("name").value = `Student ${randId}`;
-      document.getElementById("email").value = `student${randId}@college.edu`;
-      document.getElementById("phone").value = `98765${randId}0`;
-      document.getElementById("password").value = "student123";
-      document.getElementById("confirm-password").value = "student123";
+      nameInput.value = `Student ${randId}`;
+      emailInput.value = `student${randId}@college.edu`;
+      phoneInput.value = `98765${randId}0`;
+      passwordInput.value = "student123";
+      confirmPasswordInput.value = "student123";
       showToast("Sample data filled! Click Create Campus Account to test.");
     }
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
 
-      const name = document.getElementById("name").value.trim();
-      const email = document.getElementById("email").value.trim().toLowerCase();
-      const phone = document.getElementById("phone").value.trim();
+      const name = nameInput.value.trim();
+      const email = emailInput.value.trim().toLowerCase();
+      const phone = phoneInput.value.trim();
       const password = passwordInput.value;
       const confirmPassword = confirmPasswordInput.value;
 
@@ -201,11 +211,13 @@
         });
 
         // Automatically log in with new user account
-        AppState.setUser(newUser);
-        showToast(`Welcome to Campus Lost & Found, ${newUser.name}!`);
+        const loggedUser = newUser.user || newUser;
+        AppState.setUser(loggedUser);
+        localStorage.setItem("remembered_email", email);
+        showToast(`Welcome to Campus Lost & Found, ${loggedUser.name}!`);
 
         alertBox.className = "alert alert-success";
-        alertBox.innerHTML = `✅ Account created successfully for <strong>${escapeHtml(newUser.name)}</strong>! Redirecting to your dashboard...`;
+        alertBox.innerHTML = `✅ Account created successfully for <strong>${escapeHtml(loggedUser.name)}</strong>! Redirecting to your dashboard...`;
         alertBox.style.display = "block";
 
         setTimeout(() => {
@@ -214,7 +226,22 @@
 
       } catch (err) {
         alertBox.className = "alert alert-danger";
-        alertBox.innerHTML = `⚠️ ${escapeHtml(err.message || 'Registration failed')}`;
+        const errMsg = err.message || "";
+        const isDuplicate = err.status === 409 || errMsg.toLowerCase().includes("already exists");
+
+        if (isDuplicate) {
+          alertBox.innerHTML = `
+            <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+              <div>⚠️ <strong>Account Already Exists</strong>: An account is already registered for <code>${escapeHtml(email)}</code>.</div>
+              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.25rem;">
+                <a href="login.html?email=${encodeURIComponent(email)}" class="btn btn-primary btn-sm">Sign In to this Account &rarr;</a>
+                <a href="login.html?email=${encodeURIComponent(email)}&reset=true" class="btn btn-secondary btn-sm">Reset Password</a>
+              </div>
+            </div>
+          `;
+        } else {
+          alertBox.innerHTML = `⚠️ ${escapeHtml(errMsg || 'Registration failed')}`;
+        }
         alertBox.style.display = "block";
       } finally {
         submitBtn.disabled = false;

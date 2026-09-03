@@ -62,7 +62,13 @@
             <input type="checkbox" id="remember-me" checked>
             <span>Remember my email</span>
           </label>
-          <span style="color: var(--text-subtle); font-size: 0.8rem;">Demo pass: <code>student123</code></span>
+          <button 
+            type="button" 
+            onclick="toggleResetPasswordPanel()" 
+            style="background:none; border:none; color: var(--primary); font-size: 0.85rem; cursor: pointer; font-weight: 600; padding: 0;"
+          >
+            Forgot Password?
+          </button>
         </div>
 
         <button type="submit" id="submit-btn" class="btn btn-primary btn-block" style="font-size: 1rem; padding: 0.75rem;">
@@ -70,16 +76,59 @@
         </button>
       </form>
 
+      <!-- Inline Reset Password Section (collapsible) -->
+      <div id="reset-password-panel" style="display: none; margin-top: 1.25rem; padding: 1.25rem; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: var(--radius-md);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+          <h3 style="font-size: 1rem; font-weight: 700; color: #1e40af; margin: 0;">🔑 Reset Password</h3>
+          <button type="button" onclick="toggleResetPasswordPanel(false)" style="background:none; border:none; color: #64748b; font-size: 1.1rem; cursor: pointer;">✕</button>
+        </div>
+        <p style="font-size: 0.82rem; color: #3b82f6; margin-bottom: 0.75rem;">
+          Enter your registered email and choose a new password (min 6 chars).
+        </p>
+
+        <div id="reset-alert-box" class="alert" style="display: none; padding: 0.6rem 0.8rem; font-size: 0.85rem; margin-bottom: 0.75rem;"></div>
+
+        <form id="reset-password-form">
+          <div class="form-group" style="margin-bottom: 0.75rem;">
+            <label class="form-label" style="font-size: 0.8rem;" for="reset-email">Account Email</label>
+            <input type="email" id="reset-email" class="form-control" placeholder="your.email@college.edu" required style="font-size: 0.9rem; padding: 0.45rem 0.75rem;">
+          </div>
+          <div class="form-group" style="margin-bottom: 0.75rem;">
+            <label class="form-label" style="font-size: 0.8rem;" for="reset-new-password">New Password (min 6 characters)</label>
+            <input type="password" id="reset-new-password" class="form-control" placeholder="At least 6 characters" minlength="6" required style="font-size: 0.9rem; padding: 0.45rem 0.75rem;">
+          </div>
+          <div class="form-group" style="margin-bottom: 1rem;">
+            <label class="form-label" style="font-size: 0.8rem;" for="reset-confirm-password">Confirm New Password</label>
+            <input type="password" id="reset-confirm-password" class="form-control" placeholder="Re-type new password" minlength="6" required style="font-size: 0.9rem; padding: 0.45rem 0.75rem;">
+          </div>
+          <div style="display: flex; gap: 0.5rem;">
+            <button type="submit" id="reset-submit-btn" class="btn btn-primary btn-sm" style="flex: 1; padding: 0.5rem 1rem;">
+              Save &amp; Sign In
+            </button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="toggleResetPasswordPanel(false)">
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+
       <div style="margin-top: 1.5rem; padding-top: 1.25rem; border-top: 1px solid var(--border-subtle); text-align: center; font-size: 0.9rem;">
         Don't have a campus account? <a href="register.html" style="font-weight: 600; color: var(--primary);">Register here &rarr;</a>
       </div>
 
       <!-- Quick Test Accounts for Instant Testing & Evaluation -->
       <div style="margin-top: 1.5rem; background: #f8fafc; border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 1rem;">
-        <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-subtle); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.65rem;">
-          ⚡ Quick 1-Click Sign-In (Demo Profiles):
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem;">
+          <div style="font-size: 0.78rem; font-weight: 700; color: var(--text-subtle); text-transform: uppercase; letter-spacing: 0.05em;">
+            ⚡ Quick 1-Click Sign-In (Demo Profiles):
+          </div>
+          <span style="font-size: 0.75rem; color: var(--text-subtle);">Pass: <code>student123</code></span>
         </div>
         <div id="quick-accounts-list" style="display: flex; flex-direction: column; gap: 0.4rem;">
+          <button type="button" class="btn btn-secondary btn-sm" style="justify-content: space-between; text-align: left;" onclick="quickLogin('mounikadammu83@gmail.com', 'student123')">
+            <span>👤 <strong>Mounika Dammu</strong> (Wallet, Bag, Keys)</span>
+            <span style="font-size: 0.75rem; color: var(--text-subtle);">mounikadammu83@...</span>
+          </button>
           <button type="button" class="btn btn-secondary btn-sm" style="justify-content: space-between; text-align: left;" onclick="quickLogin('alex.j@college.edu', 'student123')">
             <span>👤 <strong>Alex Johnson</strong> (ID Card &amp; Calc)</span>
             <span style="font-size: 0.75rem; color: var(--text-subtle);">alex.j@college.edu</span>
@@ -92,9 +141,9 @@
             <span>👤 <strong>David Chen</strong> (Backpack finder)</span>
             <span style="font-size: 0.75rem; color: var(--text-subtle);">david.c@college.edu</span>
           </button>
-          <button type="button" class="btn btn-secondary btn-sm" style="justify-content: space-between; text-align: left;" onclick="quickLogin('mounikadammu83@gmail.com', 'student123')">
-            <span>👤 <strong>Mounika Dammu</strong> (Wallet &amp; Dell bag)</span>
-            <span style="font-size: 0.75rem; color: var(--text-subtle);">mounikadammu83@...</span>
+          <button type="button" class="btn btn-secondary btn-sm" style="justify-content: space-between; text-align: left;" onclick="quickLogin('dammumounika790@gmail.com', 'student123')">
+            <span>👤 <strong>Mounika</strong> (NPTEL Certificate)</span>
+            <span style="font-size: 0.75rem; color: var(--text-subtle);">dammumounika790@...</span>
           </button>
         </div>
       </div>
@@ -112,6 +161,13 @@
     const emailInput = document.getElementById("email");
     const passwordInput = document.getElementById("password");
     const loggedInNotice = document.getElementById("logged-in-notice");
+    const resetPanel = document.getElementById("reset-password-panel");
+    const resetForm = document.getElementById("reset-password-form");
+    const resetAlertBox = document.getElementById("reset-alert-box");
+    const resetEmailInput = document.getElementById("reset-email");
+    const resetNewPasswordInput = document.getElementById("reset-new-password");
+    const resetConfirmPasswordInput = document.getElementById("reset-confirm-password");
+    const resetSubmitBtn = document.getElementById("reset-submit-btn");
 
     // Check if user is already logged in
     function checkCurrentSession() {
@@ -141,15 +197,21 @@
       emailInput.value = remembered;
     }
 
-    // Check query params (e.g. registered=true)
+    // Check query params (e.g. registered=true, email=..., reset=true)
     const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("email")) {
+      emailInput.value = urlParams.get("email");
+      resetEmailInput.value = urlParams.get("email");
+    }
+
     if (urlParams.get("registered") === "true") {
       alertBox.className = "alert alert-success";
-      alertBox.innerHTML = "✅ Account registered successfully! You can now sign in with your credentials.";
+      alertBox.innerHTML = "✅ Account created successfully! You can now sign in with your credentials.";
       alertBox.style.display = "block";
-      if (urlParams.get("email")) {
-        emailInput.value = urlParams.get("email");
-      }
+    }
+
+    if (urlParams.get("reset") === "true") {
+      toggleResetPasswordPanel(true);
     }
 
     checkCurrentSession();
@@ -165,16 +227,89 @@
       }
     }
 
+    function toggleResetPasswordPanel(show) {
+      const isVisible = resetPanel.style.display === "block";
+      const shouldShow = typeof show === "boolean" ? show : !isVisible;
+      resetPanel.style.display = shouldShow ? "block" : "none";
+      if (shouldShow) {
+        if (!resetEmailInput.value && emailInput.value) {
+          resetEmailInput.value = emailInput.value.trim();
+        }
+        resetNewPasswordInput.focus();
+      }
+    }
+
     function quickLogin(email, password) {
       emailInput.value = email;
       passwordInput.value = password;
       form.dispatchEvent(new Event("submit"));
     }
 
+    // Reset Password Form Handler
+    resetForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = resetEmailInput.value.trim().toLowerCase();
+      const newPassword = resetNewPasswordInput.value;
+      const confirmPassword = resetConfirmPasswordInput.value;
+
+      if (!email || !newPassword) {
+        resetAlertBox.className = "alert alert-danger";
+        resetAlertBox.innerHTML = "⚠️ Please provide your email and new password.";
+        resetAlertBox.style.display = "block";
+        return;
+      }
+
+      if (newPassword.length < 6) {
+        resetAlertBox.className = "alert alert-danger";
+        resetAlertBox.innerHTML = "⚠️ New password must be at least 6 characters.";
+        resetAlertBox.style.display = "block";
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        resetAlertBox.className = "alert alert-danger";
+        resetAlertBox.innerHTML = "⚠️ Passwords do not match. Please re-enter.";
+        resetAlertBox.style.display = "block";
+        return;
+      }
+
+      resetSubmitBtn.disabled = true;
+      resetSubmitBtn.textContent = "Updating...";
+      resetAlertBox.style.display = "none";
+
+      try {
+        const res = await apiFetch("/auth/reset-password", {
+          method: "POST",
+          body: JSON.stringify({ email, newPassword })
+        });
+
+        const user = res.user || res;
+        AppState.setUser(user);
+        showToast("Password updated! Welcome, " + user.name);
+
+        resetAlertBox.className = "alert alert-success";
+        resetAlertBox.innerHTML = `✅ Password updated successfully! Logging you in as <strong>${escapeHtml(user.name)}</strong>...`;
+        resetAlertBox.style.display = "block";
+
+        setTimeout(() => {
+          window.location.href = "dashboard.html";
+        }, 600);
+
+      } catch (err) {
+        resetAlertBox.className = "alert alert-danger";
+        resetAlertBox.innerHTML = `⚠️ ${escapeHtml(err.message || 'Failed to reset password.')}`;
+        resetAlertBox.style.display = "block";
+      } finally {
+        resetSubmitBtn.disabled = false;
+        resetSubmitBtn.textContent = "Save & Sign In";
+      }
+    });
+
+    // Login Form Handler
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
 
-      const email = emailInput.value.trim();
+      const email = emailInput.value.trim().toLowerCase();
       const password = passwordInput.value;
 
       if (!email || !password) {
@@ -200,11 +335,12 @@
           localStorage.removeItem("remembered_email");
         }
 
-        AppState.setUser(res.user);
-        showToast("Welcome back, " + res.user.name + "!");
+        const loggedUser = res.user || res;
+        AppState.setUser(loggedUser);
+        showToast("Welcome back, " + loggedUser.name + "!");
 
         alertBox.className = "alert alert-success";
-        alertBox.innerHTML = `✅ Welcome back, <strong>${escapeHtml(res.user.name)}</strong>! Redirecting to your dashboard...`;
+        alertBox.innerHTML = `✅ Welcome back, <strong>${escapeHtml(loggedUser.name)}</strong>! Redirecting to your dashboard...`;
         alertBox.style.display = "block";
 
         setTimeout(() => {
@@ -213,7 +349,27 @@
 
       } catch (err) {
         alertBox.className = "alert alert-danger";
-        alertBox.innerHTML = `⚠️ ${escapeHtml(err.message || 'Login failed. Please verify your credentials.')}`;
+        const errMsg = err.message || "";
+        if (errMsg.toLowerCase().includes("no account found")) {
+          alertBox.innerHTML = `
+            <div style="display:flex; flex-direction:column; gap:0.4rem;">
+              <div>⚠️ No campus account found with <strong>${escapeHtml(email)}</strong>.</div>
+              <div><a href="register.html?email=${encodeURIComponent(email)}" class="btn btn-primary btn-sm" style="display:inline-block; margin-top:0.25rem;">Register New Account &rarr;</a></div>
+            </div>
+          `;
+        } else if (errMsg.toLowerCase().includes("incorrect password")) {
+          alertBox.innerHTML = `
+            <div style="display:flex; flex-direction:column; gap:0.4rem;">
+              <div>⚠️ Incorrect password entered.</div>
+              <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.25rem;">
+                <button type="button" class="btn btn-primary btn-sm" onclick="toggleResetPasswordPanel(true)">Reset Password</button>
+                <button type="button" class="btn btn-secondary btn-sm" onclick="quickLogin('${escapeHtml(email)}', 'student123')">Try 'student123'</button>
+              </div>
+            </div>
+          `;
+        } else {
+          alertBox.innerHTML = `⚠️ ${escapeHtml(errMsg || 'Login failed. Please verify your credentials.')}`;
+        }
         alertBox.style.display = "block";
       } finally {
         submitBtn.disabled = false;
