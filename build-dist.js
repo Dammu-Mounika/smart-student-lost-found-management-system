@@ -34,6 +34,18 @@ if (fs.existsSync(frontendDir)) {
   copyDirectory(path.join(frontendDir, "css"), path.resolve("css"));
   copyDirectory(path.join(frontendDir, "js"), path.resolve("js"));
 
+  // 4. Mirror HTML files to root
+  const rootHtmlFiles = fs.readdirSync(frontendDir).filter(f => f.endsWith(".html"));
+  for (const f of rootHtmlFiles) {
+    fs.copyFileSync(path.join(frontendDir, f), path.resolve(f));
+  }
+
+  // 5. Copy database directory to dist/database for Vercel/serverless packaging
+  const databaseDir = path.resolve("database");
+  if (fs.existsSync(databaseDir)) {
+    copyDirectory(databaseDir, path.join(distDir, "database"));
+  }
+
   console.log("Successfully prepared frontend files in dist/ and root for production & Vercel.");
 } else {
   console.warn("frontend directory not found, skipping copy.");

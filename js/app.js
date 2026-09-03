@@ -175,29 +175,42 @@ async function apiFetch(endpoint, options = {}) {
   console.log("API Response:", response.status, data);
 
   if (!response.ok) {
-    let errorMessage = "Request failed";
+    let errorMessage = "";
 
-    // FastAPI normal error
-    if (typeof data.detail === "string") {
+    // FastAPI/Express detail error
+    if (typeof data.detail === "string" && data.detail.trim()) {
       errorMessage = data.detail;
     }
-
-    // FastAPI validation error
-    else if (Array.isArray(data.detail)) {
+    // FastAPI validation error array
+    else if (Array.isArray(data.detail) && data.detail.length > 0) {
       errorMessage = data.detail
         .map((error) => {
           const location = Array.isArray(error.loc)
             ? error.loc.join(".")
             : "field";
-
           return `${location}: ${error.msg}`;
         })
         .join("\n");
     }
-
-    // Other API error
-    else if (typeof data.message === "string") {
+    // Other API error message
+    else if (typeof data.message === "string" && data.message.trim()) {
       errorMessage = data.message;
+    }
+    else if (typeof data.error === "string" && data.error.trim()) {
+      errorMessage = data.error;
+    }
+    // Status-specific fallbacks
+    else if (response.status === 401) {
+      errorMessage = "Invalid email or password. Please check your credentials.";
+    }
+    else if (response.status === 404) {
+      errorMessage = "API service endpoint not found (HTTP 404).";
+    }
+    else if (response.status === 500) {
+      errorMessage = "Server encountered an error (HTTP 500). Please try again.";
+    }
+    else {
+      errorMessage = `Request failed (HTTP ${response.status}${response.statusText ? ' ' + response.statusText : ''})`;
     }
 
     throw new Error(errorMessage);

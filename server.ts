@@ -4,11 +4,61 @@ import fs from "fs";
 import crypto from "crypto";
 import initSqlJs, { Database } from "sql.js";
 
+function getAppDir() {
+  try {
+    // In CommonJS environments
+    if (typeof __dirname !== "undefined") {
+      return __dirname;
+    }
+  } catch {}
+  return process.cwd();
+}
+const appDir = getAppDir();
+
 const app = express();
 const PORT = 3000;
 
-app.use(express.json({ limit: "15mb" }));
-app.use(express.urlencoded({ extended: true, limit: "15mb" }));
+// Enable CORS and preflight handling
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
+// Safe Body Parsing that supports standard server, express, and Vercel serverless
+app.use((req: any, res: any, next: any) => {
+  if (req.body !== undefined && req.body !== null) {
+    if (typeof req.body === "string" && req.body.trim()) {
+      try {
+        req.body = JSON.parse(req.body);
+      } catch {
+        // preserve
+      }
+    }
+    req._parsedBody = req.body;
+  }
+  next();
+});
+
+app.use((req: any, res: any, next: any) => {
+  if (req._parsedBody !== undefined) {
+    req.body = req._parsedBody;
+    return next();
+  }
+  express.json({ limit: "15mb" })(req, res, next);
+});
+
+app.use((req: any, res: any, next: any) => {
+  if (req._parsedBody !== undefined) {
+    req.body = req._parsedBody;
+    return next();
+  }
+  express.urlencoded({ extended: true, limit: "15mb" })(req, res, next);
+});
 
 // Database directory setup
 const isVercel = Boolean(process.env.VERCEL);
@@ -238,18 +288,22 @@ async function initDatabase() {
   const SQL = await initSqlJs();
   let fileBuffer: Buffer | null = null;
 
-  if (fs.existsSync(dbFilePath)) {
-    try {
-      fileBuffer = fs.readFileSync(dbFilePath);
-    } catch {
-      fileBuffer = null;
-    }
-  } else {
-    // In serverless / Vercel, load initial seed data from project database directory
-    const repoDbPath = path.join(process.cwd(), "database", "lost_found.db");
-    if (fs.existsSync(repoDbPath)) {
+  const candidatePaths = [
+    dbFilePath,
+    path.join(process.cwd(), "database", "lost_found.db"),
+    path.join(process.cwd(), "dist", "database", "lost_found.db"),
+    path.join(appDir, "database", "lost_found.db"),
+    path.join(appDir, "..", "database", "lost_found.db")
+  ];
+
+  for (const cand of candidatePaths) {
+    if (fs.existsSync(cand)) {
       try {
-        fileBuffer = fs.readFileSync(repoDbPath);
+        fileBuffer = fs.readFileSync(cand);
+        if (fileBuffer && fileBuffer.length > 0) {
+          console.log("Loaded SQLite database from:", cand);
+          break;
+        }
       } catch {
         fileBuffer = null;
       }
@@ -307,19 +361,23 @@ async function initDatabase() {
     );
   `);
 
+  const samplePw = hashPassword("student123");
+
   // Seed starter campus data if users table is empty
   const userCountRes = db.exec("SELECT COUNT(*) as count FROM users;");
   const count = userCountRes[0]?.values[0][0] || 0;
 
   if (count === 0) {
     console.log("Seeding sample college campus data for immediate interview testing...");
-    const samplePw = hashPassword("student123");
 
     db.run(
       `INSERT INTO users (name, email, password, phone) VALUES 
        ('Alex Johnson', 'alex.j@college.edu', '${samplePw}', '9876543210'),
        ('Sarah Miller', 'sarah.m@college.edu', '${samplePw}', '9876543211'),
-       ('David Chen', 'david.c@college.edu', '${samplePw}', '9876543212');`
+       ('David Chen', 'david.c@college.edu', '${samplePw}', '9876543212'),
+       ('Mounika Dammu', 'mounikadammu83@gmail.com', '${samplePw}', '9346215946'),
+       ('Emma Watson', 'emma.w@college.edu', '${samplePw}', '9876543299'),
+       ('Gowrish', 'gowrish@gmail.com', '${samplePw}', '+919912879540');`
     );
 
     // Seed Items (Matches will be automatically generated!)
@@ -330,10 +388,19 @@ async function initDatabase() {
       (1, 'lost', 'Electronics', 'Casio FX-991EX Calculator', 'Scientific calculator with silver sliding case. Left on desk in 2nd floor library.', 'Library 2nd Floor', '2026-09-01', 'alex.j@college.edu', 'Lost'),
       (3, 'found', 'Electronics', 'Casio Scientific Calculator', 'Casio FX series calculator found on study table.', 'Central Library', '2026-09-01', 'david.c@college.edu', 'Found'),
       (2, 'lost', 'Keys', 'Motorcycle Key with Honda Keychain', 'Black key with silver Honda emblem ring and red tag.', 'Main Parking Lot', '2026-08-31', 'sarah.m@college.edu', 'Lost'),
-      (3, 'found', 'Bag', 'Navy Blue Laptop Backpack', 'Dell backpack with water bottle in side pocket found near bench.', 'Sports Ground', '2026-09-02', 'david.c@college.edu', 'Found');
+      (3, 'found', 'Bag', 'Navy Blue Laptop Backpack', 'Dell backpack with water bottle in side pocket found near bench.', 'Sports Ground', '2026-09-02', 'david.c@college.edu', 'Found'),
+      (4, 'lost', 'Bag', 'Black Laptop Dell Bag', 'Black bag with Dell name and charger in pocket', 'Near Library', '2026-09-03', 'mounikadammu83@gmail.com', 'Lost'),
+      (4, 'lost', 'Wallet', 'Brown Leather Wallet', 'Lost wallet with student ID and cash', 'Near Library', '2026-09-03', 'mounikadammu83@gmail.com', 'Lost');
     `);
 
     saveDatabase();
+  } else {
+    // Ensure Mounika Dammu is present and can sign in with student123
+    const mounikaCheck = queryOne(`SELECT id FROM users WHERE LOWER(email) = 'mounikadammu83@gmail.com';`);
+    if (!mounikaCheck) {
+      db.run(`INSERT INTO users (name, email, password, phone) VALUES ('Mounika Dammu', 'mounikadammu83@gmail.com', '${samplePw}', '9346215946');`);
+      saveDatabase();
+    }
   }
 
   // Trigger matching check on boot
@@ -470,22 +537,34 @@ app.post("/api/register", (req, res) => {
 });
 
 // 2. Auth: Login
-app.post("/api/login", (req, res) => {
+app.post(["/api/login", "/login"], (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password } = req.body || {};
     if (!email || !password) {
       return res.status(400).json({ detail: "Email and password are required." });
     }
     const emailNorm = String(email).trim().toLowerCase();
+    const safeEmail = emailNorm.replace(/'/g, "''");
     const hashed = hashPassword(password);
+    const rawHash = crypto.createHash("sha256").update(password).digest("hex");
+    const plainPw = String(password).replace(/'/g, "''");
 
     const user = queryOne(`
       SELECT id, name, email, phone FROM users
-      WHERE LOWER(email) = '${emailNorm.replace(/'/g, "''")}' AND password = '${hashed}';
+      WHERE LOWER(email) = '${safeEmail}' AND (
+        password = '${hashed}' OR 
+        password = '${rawHash}' OR 
+        password = '${plainPw}'
+      );
     `);
 
     if (!user) {
-      return res.status(401).json({ detail: "Invalid email or password. Please check your credentials and try again." });
+      const userExists = queryOne(`SELECT id FROM users WHERE LOWER(email) = '${safeEmail}';`);
+      if (!userExists) {
+        return res.status(401).json({ detail: "No account found with this email address. Please register or use a demo account." });
+      } else {
+        return res.status(401).json({ detail: "Incorrect password. If using a demo account, the password is 'student123'." });
+      }
     }
 
     res.json({
@@ -1014,14 +1093,22 @@ app.post("/api/match-calculator", (req, res) => {
   }
 });
 
+// Any unhandled API request returns JSON detail rather than HTML 404
+app.all(["/api/*", "/api"], (req, res) => {
+  res.status(404).json({ detail: `API endpoint not found: ${req.method} ${req.path}` });
+});
+
 // Serve frontend static files
 const frontendDir = fs.existsSync(path.join(process.cwd(), "frontend"))
   ? path.join(process.cwd(), "frontend")
-  : path.join(__dirname, "frontend");
+  : path.join(appDir, "frontend");
 app.use(express.static(frontendDir));
 
 // Fallback to frontend/index.html for any direct web page requests
 app.get("*", (req, res) => {
+  if (req.path.startsWith("/api/")) {
+    return res.status(404).json({ detail: `API endpoint not found: ${req.method} ${req.path}` });
+  }
   const possibleFile = path.join(frontendDir, req.path);
   if (fs.existsSync(possibleFile) && fs.statSync(possibleFile).isFile()) {
     return res.sendFile(possibleFile);
