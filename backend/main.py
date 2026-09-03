@@ -18,11 +18,10 @@ from typing import List, Optional
 import hashlib
 import json
 import os
-
-from database import engine, Base, get_db
-import models
-import schemas
-from matching import calculate_match_score
+from backend.database import engine, Base, get_db
+from backend import models 
+from backend import schemas
+from backend.matching import calculate_match_score
 
 # Initialize database tables
 Base.metadata.create_all(bind=engine)

@@ -64,7 +64,7 @@ const AppState = {
         </div>
       `;
     }
-  }
+  },
 };
 
 // Immediate initialization so currentUser is ready synchronously
@@ -75,21 +75,63 @@ async function apiFetch(endpoint, options = {}) {
   const defaultHeaders = {
     "Content-Type": "application/json",
   };
-  options.headers = { ...defaultHeaders, ...options.headers };
+
+  options.headers = {
+    ...defaultHeaders,
+    ...options.headers,
+  };
 
   try {
-    const response = await fetch(`/api${endpoint}`, options);
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.detail || data.message || "An error occurred");
+    const response = await fetch(`http://127.0.0.1:8000${endpoint}`, options);
+
+    let data = {};
+
+    try {
+      data = await response.json();
+    } catch {
+      data = {};
     }
+
+    if (!response.ok) {
+      // FastAPI validation error
+      if (Array.isArray(data.detail)) {
+        const errors = data.detail
+          .map((error) => {
+            const field = error.loc ? error.loc.join(".") : "field";
+
+            return `${field}: ${error.msg}`;
+          })
+          .join("\n");
+
+        throw new Error(errors);
+      }
+
+      throw new Error(
+        data.detail ||
+          data.message ||
+          `Request failed with status ${response.status}`,
+      );
+    }
+
     return data;
-  } catch (err) {
-    console.error(`API Error on ${endpoint}:`, err);
-    throw err;
+  } catch (error) {
+    console.error(`API Error on ${endpoint}:`, error);
+
+    throw error;
   }
 }
+function escapeHTML(value) {
+  if (value === null || value === undefined) {
+    return "";
+  }
 
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
 // Toast Notifications
 function showToast(message, type = "info") {
   let container = document.getElementById("toast-container");
@@ -114,7 +156,14 @@ function showToast(message, type = "info") {
 }
 
 // Custom In-App Non-Blocking Confirmation Modal (replaces window.confirm which is blocked in iframes)
-function showCustomConfirm({ title, message, confirmText = "Confirm", cancelText = "Cancel", confirmClass = "btn-primary", onConfirm }) {
+function showCustomConfirm({
+  title,
+  message,
+  confirmText = "Confirm",
+  cancelText = "Cancel",
+  confirmClass = "btn-primary",
+  onConfirm,
+}) {
   const existing = document.getElementById("custom-confirm-modal");
   if (existing) existing.remove();
 
@@ -146,17 +195,21 @@ function showCustomConfirm({ title, message, confirmText = "Confirm", cancelText
 
   const cleanup = () => modal.remove();
 
-  document.getElementById("custom-confirm-cancel-btn").addEventListener("click", cleanup);
+  document
+    .getElementById("custom-confirm-cancel-btn")
+    .addEventListener("click", cleanup);
   modal.addEventListener("click", (e) => {
     if (e.target === modal) cleanup();
   });
 
-  document.getElementById("custom-confirm-ok-btn").addEventListener("click", () => {
-    cleanup();
-    if (typeof onConfirm === "function") {
-      onConfirm();
-    }
-  });
+  document
+    .getElementById("custom-confirm-ok-btn")
+    .addEventListener("click", () => {
+      cleanup();
+      if (typeof onConfirm === "function") {
+        onConfirm();
+      }
+    });
 }
 
 // Global Item Details Modal
@@ -165,8 +218,8 @@ function showItemModal(item) {
   if (existing) existing.remove();
 
   const isLost = item.item_type === "lost";
-  const typeBadge = isLost 
-    ? `<span class="badge badge-lost">Lost Item</span>` 
+  const typeBadge = isLost
+    ? `<span class="badge badge-lost">Lost Item</span>`
     : `<span class="badge badge-found">Found Item</span>`;
 
   let statusClass = "badge-resolved";
@@ -195,7 +248,7 @@ function showItemModal(item) {
             <li><span class="spec-label">Location:</span> <strong>📍 ${escapeHtml(item.location)}</strong></li>
             <li><span class="spec-label">Date:</span> <strong>📅 ${escapeHtml(item.date)}</strong></li>
             <li><span class="spec-label">Reported:</span> ${new Date(item.created_at || item.date).toLocaleDateString()}</li>
-            <li><span class="spec-label">Contact:</span> <a href="mailto:${escapeHtml(item.contact_info || '')}">${escapeHtml(item.contact_info || 'Available upon match')}</a></li>
+            <li><span class="spec-label">Contact:</span> <a href="mailto:${escapeHtml(item.contact_info || "")}">${escapeHtml(item.contact_info || "Available upon match")}</a></li>
           </ul>
         </div>
 
@@ -205,13 +258,17 @@ function showItemModal(item) {
         </div>
 
         <div style="display: flex; justify-content: flex-end; gap: 0.75rem; border-top: 1px solid var(--border-subtle); padding-top: 1rem; flex-wrap: wrap;">
-          ${item.status === 'Possible Match' ? `
+          ${
+            item.status === "Possible Match"
+              ? `
             <button class="btn btn-primary btn-sm" onclick="document.getElementById('item-detail-modal').remove(); openMatchModalForReport(${item.id})">
               🎯 Review &amp; Confirm Match
             </button>
-          ` : `
+          `
+              : `
             <a href="matches.html?item_id=${item.id}" class="btn btn-secondary btn-sm">Check Matches</a>
-          `}
+          `
+          }
           <button class="btn btn-secondary btn-sm" onclick="document.getElementById('item-detail-modal').remove()">Close</button>
         </div>
       </div>
@@ -256,10 +313,10 @@ async function openMatchModalForReport(itemId) {
               </h2>
             </div>
             <div style="display: flex; align-items: center; gap: 0.5rem;">
-              <span class="match-score-badge" style="background: ${match.match_score >= 80 ? '#ecfdf5' : 'var(--warning-light)'}; color: ${match.match_score >= 80 ? '#065f46' : '#92400e'};">
+              <span class="match-score-badge" style="background: ${match.match_score >= 80 ? "#ecfdf5" : "var(--warning-light)"}; color: ${match.match_score >= 80 ? "#065f46" : "#92400e"};">
                 🎯 ${match.match_score}% Match Score
               </span>
-              <span id="modal-match-status-badge" class="badge ${isConfirmed ? 'badge-verified' : 'badge-possible-match'}">
+              <span id="modal-match-status-badge" class="badge ${isConfirmed ? "badge-verified" : "badge-possible-match"}">
                 ${escapeHtml(match.status)}
               </span>
             </div>
@@ -269,22 +326,22 @@ async function openMatchModalForReport(itemId) {
           <div class="match-comparison-grid" style="margin-bottom: 1rem;">
             <div class="comparison-column lost-side">
               <div class="column-header lost-title">Lost Report (#${lost.id})</div>
-              <h4 style="font-weight: 700; margin-bottom: 0.5rem; color: var(--text-main); font-size: 1rem;">${escapeHtml(lost.item_name || 'Lost Item')}</h4>
+              <h4 style="font-weight: 700; margin-bottom: 0.5rem; color: var(--text-main); font-size: 1rem;">${escapeHtml(lost.item_name || "Lost Item")}</h4>
               <ul class="item-spec-list" style="font-size: 0.85rem;">
                 <li><span class="spec-label">Category:</span> <strong>${escapeHtml(lost.category)}</strong></li>
                 <li><span class="spec-label">Location:</span> <strong>📍 ${escapeHtml(lost.location)}</strong></li>
                 <li><span class="spec-label">Date:</span> <strong>📅 ${escapeHtml(lost.date)}</strong></li>
-                <li><span class="spec-label">Details:</span> ${escapeHtml(lost.description || 'N/A')}</li>
+                <li><span class="spec-label">Details:</span> ${escapeHtml(lost.description || "N/A")}</li>
               </ul>
             </div>
             <div class="comparison-column found-side">
               <div class="column-header found-title">Found Report (#${found.id})</div>
-              <h4 style="font-weight: 700; margin-bottom: 0.5rem; color: var(--text-main); font-size: 1rem;">${escapeHtml(found.item_name || 'Found Item')}</h4>
+              <h4 style="font-weight: 700; margin-bottom: 0.5rem; color: var(--text-main); font-size: 1rem;">${escapeHtml(found.item_name || "Found Item")}</h4>
               <ul class="item-spec-list" style="font-size: 0.85rem;">
                 <li><span class="spec-label">Category:</span> <strong>${escapeHtml(found.category)}</strong></li>
                 <li><span class="spec-label">Location:</span> <strong>📍 ${escapeHtml(found.location)}</strong></li>
                 <li><span class="spec-label">Date:</span> <strong>📅 ${escapeHtml(found.date)}</strong></li>
-                <li><span class="spec-label">Details:</span> ${escapeHtml(found.description || 'N/A')}</li>
+                <li><span class="spec-label">Details:</span> ${escapeHtml(found.description || "N/A")}</li>
               </ul>
             </div>
           </div>
@@ -306,18 +363,21 @@ async function openMatchModalForReport(itemId) {
 
           <!-- Contact Information & Action Section -->
           <div id="modal-match-actions-container">
-            ${isConfirmed ? `
+            ${
+              isConfirmed
+                ? `
               <div style="background: #ecfdf5; border: 1px solid #a7f3d0; padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1rem;">
                 <div style="font-weight: 700; color: #065f46; margin-bottom: 0.35rem;">✅ Match Verified! Contact Details Unlocked:</div>
                 <div style="font-size: 0.9rem; color: #064e3b;">
-                  <div>Lost Report Contact: <strong>${escapeHtml(lost.contact_info || 'Available')}</strong></div>
-                  <div>Found Report Contact: <strong>${escapeHtml(found.contact_info || 'Available')}</strong></div>
+                  <div>Lost Report Contact: <strong>${escapeHtml(lost.contact_info || "Available")}</strong></div>
+                  <div>Found Report Contact: <strong>${escapeHtml(found.contact_info || "Available")}</strong></div>
                 </div>
               </div>
               <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
                 <button class="btn btn-secondary btn-sm" onclick="document.getElementById('report-match-modal').remove()">Close</button>
               </div>
-            ` : `
+            `
+                : `
               <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 0.85rem; border-radius: var(--radius-md); font-size: 0.88rem; color: #1e40af; margin-bottom: 1.25rem;">
                 ℹ️ Confirming this match will officially link both reports, update their statuses to <strong>Match Verified</strong>, and unlock contact details so both parties can connect.
               </div>
@@ -332,14 +392,14 @@ async function openMatchModalForReport(itemId) {
                   Cancel
                 </button>
               </div>
-            `}
+            `
+            }
           </div>
         </div>
       </div>
     `;
 
     document.body.insertAdjacentHTML("beforeend", modalHtml);
-
   } catch (err) {
     showToast("Failed to load match: " + err.message, "danger");
   }
@@ -353,7 +413,9 @@ async function directConfirmMatchFromModal(matchId, lostId, foundId) {
   }
 
   try {
-    const res = await apiFetch(`/matches/${matchId}/confirm`, { method: "POST" });
+    const res = await apiFetch(`/matches/${matchId}/confirm`, {
+      method: "POST",
+    });
     showToast("🎉 Match confirmed successfully! Contact details unlocked.");
 
     // Update modal container in-place
@@ -371,8 +433,8 @@ async function directConfirmMatchFromModal(matchId, lostId, foundId) {
         <div style="background: #ecfdf5; border: 1px solid #a7f3d0; padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1rem;">
           <div style="font-weight: 700; color: #065f46; margin-bottom: 0.35rem;">🎉 Match Successfully Verified! Contact Details Unlocked:</div>
           <div style="font-size: 0.9rem; color: #064e3b; display: flex; flex-direction: column; gap: 0.35rem; margin-top: 0.5rem;">
-            <div>👤 Lost Owner Contact: <a href="mailto:${escapeHtml(lost.contact_info || '')}" style="font-weight:700; color: var(--primary); text-decoration:underline;">${escapeHtml(lost.contact_info || 'Available')}</a></div>
-            <div>🤝 Finder Contact: <a href="mailto:${escapeHtml(found.contact_info || '')}" style="font-weight:700; color: var(--primary); text-decoration:underline;">${escapeHtml(found.contact_info || 'Available')}</a></div>
+            <div>👤 Lost Owner Contact: <a href="mailto:${escapeHtml(lost.contact_info || "")}" style="font-weight:700; color: var(--primary); text-decoration:underline;">${escapeHtml(lost.contact_info || "Available")}</a></div>
+            <div>🤝 Finder Contact: <a href="mailto:${escapeHtml(found.contact_info || "")}" style="font-weight:700; color: var(--primary); text-decoration:underline;">${escapeHtml(found.contact_info || "Available")}</a></div>
           </div>
         </div>
         <div style="display: flex; justify-content: flex-end; gap: 0.75rem;">
@@ -437,13 +499,13 @@ function renderHeader(activePage = "") {
         </div>
       </a>
       <ul class="nav-links">
-        <li><a href="index.html" class="nav-link ${activePage === 'home' ? 'active' : ''}">Home</a></li>
-        <li><a href="report-lost.html" class="nav-link ${activePage === 'lost' ? 'active' : ''}">Report Lost</a></li>
-        <li><a href="report-found.html" class="nav-link ${activePage === 'found' ? 'active' : ''}">Report Found</a></li>
-        <li><a href="search.html" class="nav-link ${activePage === 'search' ? 'active' : ''}">Search Items</a></li>
-        <li><a href="matches.html" class="nav-link ${activePage === 'matches' ? 'active' : ''}">Possible Matches</a></li>
-        <li><a href="dashboard.html" class="nav-link ${activePage === 'dashboard' ? 'active' : ''}">Dashboard</a></li>
-        <li><a href="interview-guide.html" class="nav-link ${activePage === 'interview' ? 'active' : ''}" style="color: var(--accent); font-weight:600;">Interview Guide</a></li>
+        <li><a href="index.html" class="nav-link ${activePage === "home" ? "active" : ""}">Home</a></li>
+        <li><a href="report-lost.html" class="nav-link ${activePage === "lost" ? "active" : ""}">Report Lost</a></li>
+        <li><a href="report-found.html" class="nav-link ${activePage === "found" ? "active" : ""}">Report Found</a></li>
+        <li><a href="search.html" class="nav-link ${activePage === "search" ? "active" : ""}">Search Items</a></li>
+        <li><a href="matches.html" class="nav-link ${activePage === "matches" ? "active" : ""}">Possible Matches</a></li>
+        <li><a href="dashboard.html" class="nav-link ${activePage === "dashboard" ? "active" : ""}">Dashboard</a></li>
+        <li><a href="interview-guide.html" class="nav-link ${activePage === "interview" ? "active" : ""}" style="color: var(--accent); font-weight:600;">Interview Guide</a></li>
       </ul>
       <div id="nav-auth" class="nav-auth-group"></div>
     </div>

@@ -30,7 +30,11 @@ class UserOut(BaseModel):
 
 # --- Item Schemas ---
 class ItemCreate(BaseModel):
-    item_type: str = Field(..., regex="^(lost|found)$", description="'lost' or 'found'")
+    item_type: str = Field(
+    ...,
+    pattern="^(lost|found)$",
+    description="'lost' or 'found'"
+)
     category: str = Field(..., min_length=2, description="ID Card, Books, Wallet, Bag, Keys, Electronics, Certificates, Other")
     item_name: str = Field(..., min_length=2, description="Descriptive item name")
     description: str = Field(..., min_length=5, description="Clear description of the item")

@@ -1,231 +1,647 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Report Found Item - Smart Student Lost &amp; Found</title>
-  <link rel="stylesheet" href="css/style.css">
-</head>
-<body>
-  <header class="navbar"></header>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <main class="main-content">
-    <div class="page-header text-center">
-      <h1 class="page-title">Report a Found Item</h1>
-      <p class="page-subtitle">Found an item on campus? Submit the details below so the rightful owner can be safely reunited through our smart matching system.</p>
-    </div>
+    <title>Report Found Item - Smart Student Lost &amp; Found</title>
 
-    <!-- Success / Match Alert Container -->
-    <div id="alert-box" style="max-width: 680px; margin: 0 auto 1.5rem auto; display: none;"></div>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
 
-    <div class="form-card">
-      <form id="found-form">
-        <!-- Finder Info -->
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="finder_name">Finder Name <span class="required">*</span></label>
-            <input type="text" id="finder_name" class="form-control" placeholder="e.g. Sarah Miller" required>
+  <body>
+    <!-- Navigation -->
+    <header class="navbar"></header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Page Header -->
+      <div class="page-header text-center">
+        <h1 class="page-title">Report a Found Item</h1>
+
+        <p class="page-subtitle">
+          Found an item on campus? Submit the details below so the rightful
+          owner can be safely reunited through our smart matching system.
+        </p>
+      </div>
+
+      <!-- Success / Error / Match Alert -->
+      <div
+        id="alert-box"
+        style="max-width: 680px; margin: 0 auto 1.5rem auto; display: none"
+      ></div>
+
+      <!-- Form Card -->
+      <div class="form-card">
+        <form id="found-form">
+          <!-- ========================= -->
+          <!-- Finder Information -->
+          <!-- ========================= -->
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="finder_name">
+                Finder Name <span class="required">*</span>
+              </label>
+
+              <input
+                type="text"
+                id="finder_name"
+                class="form-control"
+                placeholder="e.g. Sarah Miller"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="email">
+                Finder Email <span class="required">*</span>
+              </label>
+
+              <input
+                type="email"
+                id="email"
+                class="form-control"
+                placeholder="e.g. sarah.m@college.edu"
+                required
+              />
+            </div>
           </div>
-          <div class="form-group">
-            <label class="form-label" for="email">Finder Email <span class="required">*</span></label>
-            <input type="email" id="email" class="form-control" placeholder="e.g. sarah.m@college.edu" required>
+
+          <!-- ========================= -->
+          <!-- Item Information -->
+          <!-- ========================= -->
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="category">
+                Item Category <span class="required">*</span>
+              </label>
+
+              <select id="category" class="form-control" required>
+                <option value="">-- Select Category --</option>
+
+                <option value="ID Card">ID Card</option>
+
+                <option value="Books">Books</option>
+
+                <option value="Wallet">Wallet</option>
+
+                <option value="Bag">Bag</option>
+
+                <option value="Keys">Keys</option>
+
+                <option value="Electronics">Electronics</option>
+
+                <option value="Water Bottle">Water Bottle</option>
+
+                <option value="Certificates">Certificates</option>
+
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="item_name">
+                Item Name <span class="required">*</span>
+              </label>
+
+              <input
+                type="text"
+                id="item_name"
+                class="form-control"
+                placeholder="e.g. College ID Card, Honda Motorcycle Key"
+                required
+              />
+            </div>
           </div>
-        </div>
 
-        <!-- Item Info -->
-        <div class="form-row">
+          <!-- ========================= -->
+          <!-- Description -->
+          <!-- ========================= -->
+
           <div class="form-group">
-            <label class="form-label" for="category">Item Category <span class="required">*</span></label>
-            <select id="category" class="form-control" required>
-              <option value="">-- Select Category --</option>
-              <option value="ID Card">ID Card</option>
-              <option value="Books">Books</option>
-              <option value="Wallet">Wallet</option>
-              <option value="Bag">Bag</option>
-              <option value="Keys">Keys</option>
-              <option value="Electronics">Electronics</option>
-              <option value="Water Bottle">Water Bottle</option>
-              <option value="Certificates">Certificates</option>
-              <option value="Other">Other</option>
-            </select>
+            <label class="form-label" for="description">
+              Detailed Description
+              <span class="required">*</span>
+            </label>
+
+            <textarea
+              id="description"
+              class="form-control"
+              placeholder="Describe color, condition, where it was picked up, and any markings. (Do not disclose confidential PINs or private ID numbers to protect security)."
+              required
+            ></textarea>
+
+            <div class="form-hint">
+              Our transparent keyword matching compares these descriptive
+              details with lost reports.
+            </div>
           </div>
-          <div class="form-group">
-            <label class="form-label" for="item_name">Item Name <span class="required">*</span></label>
-            <input type="text" id="item_name" class="form-control" placeholder="e.g. College ID Card, Honda Motorcycle Key" required>
+
+          <!-- ========================= -->
+          <!-- Location & Date -->
+          <!-- ========================= -->
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="location">
+                Location Found
+                <span class="required">*</span>
+              </label>
+
+              <input
+                type="text"
+                id="location"
+                class="form-control"
+                placeholder="e.g. Near Canteen, Library Study Table 4, Auditorium Hall"
+                required
+              />
+
+              <div class="form-hint">Precise campus location where found.</div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="date">
+                Date Found
+                <span class="required">*</span>
+              </label>
+
+              <input type="date" id="date" class="form-control" required />
+            </div>
           </div>
-        </div>
 
-        <div class="form-group">
-          <label class="form-label" for="description">Detailed Description <span class="required">*</span></label>
-          <textarea id="description" class="form-control" placeholder="Describe color, condition, where it was picked up, and any markings. (Do not disclose confidential PINs or private ID numbers to protect security)." required></textarea>
-          <div class="form-hint">Our transparent keyword matching compares these descriptive details with lost reports.</div>
-        </div>
+          <!-- ========================= -->
+          <!-- Contact & Image -->
+          <!-- ========================= -->
 
-        <!-- Location & Date -->
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="location">Location Found <span class="required">*</span></label>
-            <input type="text" id="location" class="form-control" placeholder="e.g. Near Canteen, Library Study Table 4, Auditorium Hall" required>
-            <div class="form-hint">Precise campus location where found.</div>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="date">Date Found <span class="required">*</span></label>
-            <input type="date" id="date" class="form-control" required>
-          </div>
-        </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="contact_info">
+                Handed Over To / Contact Phone
+              </label>
 
-        <!-- Contact & Image -->
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="contact_info">Handed Over To / Contact Phone</label>
-            <input type="text" id="contact_info" class="form-control" placeholder="e.g. Security Desk Gate 1 or 9876543211">
-            <div class="form-hint">Where the owner can collect the item or reach you.</div>
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="image_url">Optional Image Link</label>
-            <input type="url" id="image_url" class="form-control" placeholder="https://example.com/photo.jpg">
-          </div>
-        </div>
+              <input
+                type="text"
+                id="contact_info"
+                class="form-control"
+                placeholder="e.g. Security Desk Gate 1 or 9876543211"
+              />
 
-        <div style="margin-top: 1.5rem; display: flex; gap: 1rem; align-items: center;">
-          <button type="submit" id="submit-btn" class="btn btn-primary btn-block" style="font-size: 1rem; padding: 0.8rem 1.6rem;">
-            Submit Found Item Report
-          </button>
-        </div>
-      </form>
-    </div>
-  </main>
-
-  <script src="js/app.js"></script>
-  <script>
-    renderHeader('found');
-    renderFooter();
-
-    document.addEventListener("DOMContentLoaded", () => {
-      const today = new Date().toISOString().split('T')[0];
-      document.getElementById("date").value = today;
-
-      if (AppState.currentUser) {
-        document.getElementById("finder_name").value = AppState.currentUser.name || "";
-        document.getElementById("email").value = AppState.currentUser.email || "";
-        document.getElementById("contact_info").value = AppState.currentUser.phone || "";
-      }
-    });
-
-    const form = document.getElementById("found-form");
-    const alertBox = document.getElementById("alert-box");
-    const submitBtn = document.getElementById("submit-btn");
-
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      const finderName = document.getElementById("finder_name").value.trim();
-      const email = document.getElementById("email").value.trim();
-      const category = document.getElementById("category").value;
-      const itemName = document.getElementById("item_name").value.trim();
-      const description = document.getElementById("description").value.trim();
-      const location = document.getElementById("location").value.trim();
-      const date = document.getElementById("date").value;
-      const contactInfo = document.getElementById("contact_info").value.trim() || email;
-      const imageUrl = document.getElementById("image_url").value.trim();
-
-      if (!finderName || !email || !category || !itemName || !description || !location || !date) {
-        alertBox.className = "alert alert-danger";
-        alertBox.innerHTML = "⚠️ Please fill in all required fields.";
-        alertBox.style.display = "block";
-        return;
-      }
-
-      submitBtn.disabled = true;
-      submitBtn.textContent = "Storing and finding matches...";
-
-      try {
-        const payload = {
-          user_id: AppState.currentUser ? AppState.currentUser.id : 1,
-          finder_name: finderName,
-          email: email,
-          item_type: "found",
-          category,
-          item_name: itemName,
-          description,
-          location,
-          date,
-          contact_info: contactInfo,
-          image: imageUrl || null
-        };
-
-        const newItem = await apiFetch("/items/found", {
-          method: "POST",
-          body: JSON.stringify(payload)
-        });
-
-        // Synchronize logged-in user profile
-        if (newItem.user) {
-          AppState.setUser(newItem.user);
-        }
-
-        // Check if smart matches were found for this item
-        const matches = await apiFetch(`/matches/${newItem.id}`);
-
-        if (matches && matches.length > 0) {
-          const topMatch = matches[0];
-          const matchedName = topMatch.lost_item ? topMatch.lost_item.item_name : "Lost item";
-          const matchedLocation = topMatch.lost_item ? topMatch.lost_item.location : "Campus";
-          alertBox.className = "alert alert-warning";
-          alertBox.innerHTML = `
-            <div>
-              <h3 style="font-size:1.05rem; font-weight:700; margin-bottom:0.25rem;">
-                🎯 Possible Match Found! (${topMatch.match_score}% Score)
-              </h3>
-              <p style="font-size:0.9rem; margin-bottom:0.75rem;">
-                Your reported item <strong>"${escapeHtml(newItem.item_name)}"</strong> matches an active lost report 
-                <strong>"${escapeHtml(matchedName)}"</strong> reported by a student at <strong>${escapeHtml(matchedLocation)}</strong>.
-              </p>
-              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                <a href="matches.html" class="btn btn-primary btn-sm">Review &amp; Verify Match &rarr;</a>
-                <a href="dashboard.html" class="btn btn-secondary btn-sm">📊 View in My Dashboard</a>
+              <div class="form-hint">
+                Where the owner can collect the item or reach you.
               </div>
             </div>
-          `;
-          alertBox.style.display = "block";
-          showToast(`Report saved! Found ${matches.length} possible student match(es).`);
-        } else {
-          alertBox.className = "alert alert-success";
-          alertBox.innerHTML = `
-            <div>
-              <div style="font-size: 1.05rem; font-weight: 700; margin-bottom: 0.25rem;">
-                ✅ Found item report successfully registered!
-              </div>
-              <div style="font-size: 0.9rem; margin-bottom: 0.75rem;">
-                Thank you for helping keep our campus safe and honest. Report <strong>#${newItem.id} (${escapeHtml(newItem.item_name)})</strong> has been logged to your dashboard.
-              </div>
-              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                <a href="dashboard.html" class="btn btn-primary btn-sm">📊 View in My Dashboard &rarr;</a>
-                <a href="matches.html" class="btn btn-secondary btn-sm">🔍 Check Matches</a>
-              </div>
-            </div>
-          `;
-          alertBox.style.display = "block";
-          showToast("Found report successfully submitted and visible in your dashboard!");
-        }
 
-        form.reset();
-        document.getElementById("date").value = new Date().toISOString().split('T')[0];
+            <div class="form-group">
+              <label class="form-label" for="image_url">
+                Optional Image Link
+              </label>
+
+              <input
+                type="url"
+                id="image_url"
+                class="form-control"
+                placeholder="https://example.com/photo.jpg"
+              />
+            </div>
+          </div>
+
+          <!-- ========================= -->
+          <!-- Submit Button -->
+          <!-- ========================= -->
+
+          <div
+            style="
+              margin-top: 1.5rem;
+              display: flex;
+              gap: 1rem;
+              align-items: center;
+            "
+          >
+            <button
+              type="submit"
+              id="submit-btn"
+              class="btn btn-primary btn-block"
+              style="font-size: 1rem; padding: 0.8rem 1.6rem"
+            >
+              Submit Found Item Report
+            </button>
+          </div>
+        </form>
+      </div>
+    </main>
+
+    <!-- ========================= -->
+    <!-- Application JavaScript -->
+    <!-- ========================= -->
+
+    <script src="js/app.js"></script>
+
+    <script>
+      /*
+       * Render common navigation and footer
+       */
+      renderHeader("found");
+      renderFooter();
+
+      /*
+       * Set today's date and
+       * automatically fill logged-in user details
+       */
+      document.addEventListener("DOMContentLoaded", () => {
+        const today = new Date().toISOString().split("T")[0];
+
+        document.getElementById("date").value = today;
+
+        /*
+         * Fill finder information from logged-in user
+         */
         if (AppState.currentUser) {
-          document.getElementById("finder_name").value = AppState.currentUser.name || "";
-          document.getElementById("email").value = AppState.currentUser.email || "";
-          document.getElementById("contact_info").value = AppState.currentUser.phone || "";
+          document.getElementById("finder_name").value =
+            AppState.currentUser.name || "";
+
+          document.getElementById("email").value =
+            AppState.currentUser.email || "";
+
+          document.getElementById("contact_info").value =
+            AppState.currentUser.phone || "";
+        }
+      });
+
+      /*
+       * Get form elements
+       */
+      const form = document.getElementById("found-form");
+
+      const alertBox = document.getElementById("alert-box");
+
+      const submitBtn = document.getElementById("submit-btn");
+
+      /*
+       * Handle form submission
+       */
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        /*
+         * Read form values
+         */
+        const finderName = document.getElementById("finder_name").value.trim();
+
+        const email = document.getElementById("email").value.trim();
+
+        const category = document.getElementById("category").value;
+
+        const itemName = document.getElementById("item_name").value.trim();
+
+        const description = document.getElementById("description").value.trim();
+
+        const location = document.getElementById("location").value.trim();
+
+        const date = document.getElementById("date").value;
+
+        const contactInfo =
+          document.getElementById("contact_info").value.trim() || email;
+
+        const imageUrl = document.getElementById("image_url").value.trim();
+
+        /*
+         * Validate required fields
+         */
+        if (
+          !finderName ||
+          !email ||
+          !category ||
+          !itemName ||
+          !description ||
+          !location ||
+          !date
+        ) {
+          alertBox.className = "alert alert-danger";
+
+          alertBox.innerHTML = "⚠️ Please fill in all required fields.";
+
+          alertBox.style.display = "block";
+
+          return;
         }
 
-      } catch (err) {
-        alertBox.className = "alert alert-danger";
-        alertBox.innerHTML = `❌ Error: ${escapeHtml(err.message || 'Failed to submit report')}`;
-        alertBox.style.display = "block";
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = "Submit Found Item Report";
-      }
-    });
-  </script>
-</body>
+        /*
+         * Make sure user is logged in
+         */
+        const userId = AppState.currentUser?.id;
+
+        if (!userId) {
+          alertBox.className = "alert alert-danger";
+
+          alertBox.innerHTML =
+            "❌ Please login before submitting a found item report.";
+
+          alertBox.style.display = "block";
+
+          return;
+        }
+
+        /*
+         * Disable button while submitting
+         */
+        submitBtn.disabled = true;
+
+        submitBtn.textContent = "Storing and finding matches...";
+
+        try {
+          /*
+           * Data sent to FastAPI
+           *
+           * user_id is NOT included here.
+           * It is sent through the query parameter.
+           */
+          const payload = {
+            item_type: "found",
+
+            category: category,
+
+            item_name: itemName,
+
+            description: description,
+
+            location: location,
+
+            date: date,
+
+            contact_info: contactInfo,
+
+            image: imageUrl || null,
+          };
+
+          /*
+           * Debug information
+           */
+          console.log("Submitting found item:", payload);
+
+          console.log("User ID:", userId);
+
+          /*
+           * Send found item to FastAPI
+           *
+           * Example:
+           * POST
+           * http://127.0.0.1:8000/items/found?user_id=7
+           */
+          const newItem = await apiFetch(`/items/found?user_id=${userId}`, {
+            method: "POST",
+
+            body: JSON.stringify(payload),
+          });
+
+          console.log("Found item created:", newItem);
+
+          /*
+           * Synchronize logged-in user profile
+           */
+          if (newItem.user) {
+            AppState.setUser(newItem.user);
+          }
+
+          /*
+           * Check smart matches
+           */
+          let matches = [];
+
+          try {
+            matches = await apiFetch(`/matches/${newItem.id}`);
+          } catch (matchError) {
+            console.warn("Match checking failed:", matchError);
+
+            /*
+             * The item was already saved,
+             * so don't show a complete failure.
+             */
+            matches = [];
+          }
+
+          /*
+           * If matches were found
+           */
+          if (matches && matches.length > 0) {
+            const topMatch = matches[0];
+
+            const matchedName = topMatch.lost_item
+              ? topMatch.lost_item.item_name
+              : "Lost item";
+
+            const matchedLocation = topMatch.lost_item
+              ? topMatch.lost_item.location
+              : "Campus";
+
+            alertBox.className = "alert alert-warning";
+
+            alertBox.innerHTML = `
+
+              <div>
+
+                <h3
+                  style="
+                    font-size:1.05rem;
+                    font-weight:700;
+                    margin-bottom:0.25rem;
+                  "
+                >
+                  🎯 Possible Match Found!
+                  (${topMatch.match_score}% Score)
+                </h3>
+
+
+                <p
+                  style="
+                    font-size:0.9rem;
+                    margin-bottom:0.75rem;
+                  "
+                >
+
+                  Your reported item
+                  <strong>
+                    "${escapeHtml(newItem.item_name)}"
+                  </strong>
+
+                  matches an active lost report
+
+                  <strong>
+                    "${escapeHtml(matchedName)}"
+                  </strong>
+
+                  reported by a student at
+
+                  <strong>
+                    ${escapeHtml(matchedLocation)}
+                  </strong>.
+
+                </p>
+
+
+                <div
+                  style="
+                    display:flex;
+                    gap:0.5rem;
+                    flex-wrap:wrap;
+                  "
+                >
+
+                  <a
+                    href="matches.html"
+                    class="btn btn-primary btn-sm"
+                  >
+                    Review &amp; Verify Match &rarr;
+                  </a>
+
+
+                  <a
+                    href="dashboard.html"
+                    class="btn btn-secondary btn-sm"
+                  >
+                    📊 View in My Dashboard
+                  </a>
+
+                </div>
+
+              </div>
+
+            `;
+
+            alertBox.style.display = "block";
+
+            showToast(
+              `Report saved! Found ${matches.length} possible student match(es).`,
+            );
+          } else {
+
+          /*
+           * No matches found
+           */
+            alertBox.className = "alert alert-success";
+
+            alertBox.innerHTML = `
+
+              <div>
+
+                <div
+                  style="
+                    font-size:1.05rem;
+                    font-weight:700;
+                    margin-bottom:0.25rem;
+                  "
+                >
+                  ✅ Found item report successfully registered!
+                </div>
+
+
+                <div
+                  style="
+                    font-size:0.9rem;
+                    margin-bottom:0.75rem;
+                  "
+                >
+
+                  Thank you for helping keep our
+                  campus safe and honest.
+
+                  Report
+
+                  <strong>
+                    #${newItem.id}
+                    (${escapeHtml(newItem.item_name)})
+                  </strong>
+
+                  has been logged to your dashboard.
+
+                </div>
+
+
+                <div
+                  style="
+                    display:flex;
+                    gap:0.5rem;
+                    flex-wrap:wrap;
+                  "
+                >
+
+                  <a
+                    href="dashboard.html"
+                    class="btn btn-primary btn-sm"
+                  >
+                    📊 View in My Dashboard &rarr;
+                  </a>
+
+
+                  <a
+                    href="matches.html"
+                    class="btn btn-secondary btn-sm"
+                  >
+                    🔍 Check Matches
+                  </a>
+
+                </div>
+
+              </div>
+
+            `;
+
+            alertBox.style.display = "block";
+
+            showToast(
+              "Found report successfully submitted and visible in your dashboard!",
+            );
+          }
+
+          /*
+           * Reset form
+           */
+          form.reset();
+
+          /*
+           * Restore today's date
+           */
+          document.getElementById("date").value = new Date()
+            .toISOString()
+            .split("T")[0];
+
+          /*
+           * Restore logged-in user details
+           */
+          if (AppState.currentUser) {
+            document.getElementById("finder_name").value =
+              AppState.currentUser.name || "";
+
+            document.getElementById("email").value =
+              AppState.currentUser.email || "";
+
+            document.getElementById("contact_info").value =
+              AppState.currentUser.phone || "";
+          }
+        } catch (err) {
+          /*
+           * Handle submission errors
+           */
+          console.error("Found item submission error:", err);
+
+          alertBox.className = "alert alert-danger";
+
+          alertBox.innerHTML = `
+            ❌ Error:
+            ${escapeHtml(err.message || "Failed to submit report")}
+          `;
+
+          alertBox.style.display = "block";
+        } finally {
+          /*
+           * Re-enable submit button
+           */
+          submitBtn.disabled = false;
+
+          submitBtn.textContent = "Submit Found Item Report";
+        }
+      });
+    </script>
+  </body>
 </html>

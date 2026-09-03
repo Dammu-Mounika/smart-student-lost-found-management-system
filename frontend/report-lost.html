@@ -1,233 +1,590 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Report Lost Item - Smart Student Lost &amp; Found</title>
-  <link rel="stylesheet" href="css/style.css">
-</head>
-<body>
-  <header class="navbar"></header>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Report Lost Item - Smart Student Lost &amp; Found</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <header class="navbar"></header>
 
-  <main class="main-content">
-    <div class="page-header text-center">
-      <h1 class="page-title">Report a Lost Item</h1>
-      <p class="page-subtitle">Submit details of your misplaced belongings. The smart matching engine will immediately compare it against all reported found items.</p>
-    </div>
+    <main class="main-content">
+      <div class="page-header text-center">
+        <h1 class="page-title">Report a Lost Item</h1>
+        <p class="page-subtitle">
+          Submit details of your misplaced belongings. The smart matching engine
+          will immediately compare it against all reported found items.
+        </p>
+      </div>
 
-    <!-- Success / Match Alert Container -->
-    <div id="alert-box" style="max-width: 680px; margin: 0 auto 1.5rem auto; display: none;"></div>
+      <!-- Success / Match Alert Container -->
+      <div
+        id="alert-box"
+        style="max-width: 680px; margin: 0 auto 1.5rem auto; display: none"
+      ></div>
 
-    <div class="form-card">
-      <form id="lost-form">
-        <!-- Student Info -->
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="student_name">Student Name <span class="required">*</span></label>
-            <input type="text" id="student_name" class="form-control" placeholder="e.g. Alex Johnson" required>
+      <div class="form-card">
+        <form id="lost-form">
+          <!-- Student Info -->
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="student_name"
+                >Student Name <span class="required">*</span></label
+              >
+              <input
+                type="text"
+                id="student_name"
+                class="form-control"
+                placeholder="e.g. Alex Johnson"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="email"
+                >Student Email <span class="required">*</span></label
+              >
+              <input
+                type="email"
+                id="email"
+                class="form-control"
+                placeholder="e.g. alex.j@college.edu"
+                required
+              />
+            </div>
           </div>
-          <div class="form-group">
-            <label class="form-label" for="email">Student Email <span class="required">*</span></label>
-            <input type="email" id="email" class="form-control" placeholder="e.g. alex.j@college.edu" required>
+
+          <!-- Item Info -->
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="category"
+                >Item Category <span class="required">*</span></label
+              >
+              <select id="category" class="form-control" required>
+                <option value="">-- Select Category --</option>
+                <option value="ID Card">ID Card</option>
+                <option value="Books">Books</option>
+                <option value="Wallet">Wallet</option>
+                <option value="Bag">Bag</option>
+                <option value="Keys">Keys</option>
+                <option value="Electronics">Electronics</option>
+                <option value="Water Bottle">Water Bottle</option>
+                <option value="Certificates">Certificates</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="item_name"
+                >Item Name <span class="required">*</span></label
+              >
+              <input
+                type="text"
+                id="item_name"
+                class="form-control"
+                placeholder="e.g. Blue College ID Card"
+                required
+              />
+            </div>
           </div>
-        </div>
 
-        <!-- Item Info -->
-        <div class="form-row">
           <div class="form-group">
-            <label class="form-label" for="category">Item Category <span class="required">*</span></label>
-            <select id="category" class="form-control" required>
-              <option value="">-- Select Category --</option>
-              <option value="ID Card">ID Card</option>
-              <option value="Books">Books</option>
-              <option value="Wallet">Wallet</option>
-              <option value="Bag">Bag</option>
-              <option value="Keys">Keys</option>
-              <option value="Electronics">Electronics</option>
-              <option value="Water Bottle">Water Bottle</option>
-              <option value="Certificates">Certificates</option>
-              <option value="Other">Other</option>
-            </select>
+            <label class="form-label" for="description"
+              >Detailed Description <span class="required">*</span></label
+            >
+            <textarea
+              id="description"
+              class="form-control"
+              placeholder="Include distinctive features like color, brand, markings, stickers, or specific contents (e.g. 'Blue lanyard with department ID card, mechanical engineering sticker on back')."
+              required
+            ></textarea>
+            <div class="form-hint">
+              A detailed description helps our 10-point description matching
+              algorithm identify your item accurately.
+            </div>
           </div>
-          <div class="form-group">
-            <label class="form-label" for="item_name">Item Name <span class="required">*</span></label>
-            <input type="text" id="item_name" class="form-control" placeholder="e.g. Blue College ID Card" required>
+
+          <!-- Location & Date -->
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="location"
+                >Location Lost <span class="required">*</span></label
+              >
+              <input
+                type="text"
+                id="location"
+                class="form-control"
+                placeholder="e.g. Canteen, Library 2nd Floor, Lab 3"
+                required
+              />
+              <div class="form-hint">Specific room, table, or campus zone.</div>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="date"
+                >Date Lost <span class="required">*</span></label
+              >
+              <input type="date" id="date" class="form-control" required />
+            </div>
           </div>
-        </div>
 
-        <div class="form-group">
-          <label class="form-label" for="description">Detailed Description <span class="required">*</span></label>
-          <textarea id="description" class="form-control" placeholder="Include distinctive features like color, brand, markings, stickers, or specific contents (e.g. 'Blue lanyard with department ID card, mechanical engineering sticker on back')." required></textarea>
-          <div class="form-hint">A detailed description helps our 10-point description matching algorithm identify your item accurately.</div>
-        </div>
-
-        <!-- Location & Date -->
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="location">Location Lost <span class="required">*</span></label>
-            <input type="text" id="location" class="form-control" placeholder="e.g. Canteen, Library 2nd Floor, Lab 3" required>
-            <div class="form-hint">Specific room, table, or campus zone.</div>
+          <!-- Contact & Image -->
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="contact_info"
+                >Contact Phone / Alternative Contact</label
+              >
+              <input
+                type="text"
+                id="contact_info"
+                class="form-control"
+                placeholder="e.g. 9876543210 or Room 204"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="image_url"
+                >Optional Image Link</label
+              >
+              <input
+                type="url"
+                id="image_url"
+                class="form-control"
+                placeholder="https://example.com/photo.jpg"
+              />
+            </div>
           </div>
-          <div class="form-group">
-            <label class="form-label" for="date">Date Lost <span class="required">*</span></label>
-            <input type="date" id="date" class="form-control" required>
+
+          <div
+            style="
+              margin-top: 1.5rem;
+              display: flex;
+              gap: 1rem;
+              align-items: center;
+            "
+          >
+            <button
+              type="submit"
+              id="submit-btn"
+              class="btn btn-danger btn-block"
+              style="font-size: 1rem; padding: 0.8rem 1.6rem"
+            >
+              Submit Lost Item Report
+            </button>
           </div>
-        </div>
+        </form>
+      </div>
+    </main>
 
-        <!-- Contact & Image -->
-        <div class="form-row">
-          <div class="form-group">
-            <label class="form-label" for="contact_info">Contact Phone / Alternative Contact</label>
-            <input type="text" id="contact_info" class="form-control" placeholder="e.g. 9876543210 or Room 204">
-          </div>
-          <div class="form-group">
-            <label class="form-label" for="image_url">Optional Image Link</label>
-            <input type="url" id="image_url" class="form-control" placeholder="https://example.com/photo.jpg">
-          </div>
-        </div>
+    <script src="js/app.js"></script>
+    <script>
+      // ============================================================
+      // REPORT LOST ITEM PAGE
+      // ============================================================
 
-        <div style="margin-top: 1.5rem; display: flex; gap: 1rem; align-items: center;">
-          <button type="submit" id="submit-btn" class="btn btn-danger btn-block" style="font-size: 1rem; padding: 0.8rem 1.6rem;">
-            Submit Lost Item Report
-          </button>
-        </div>
-      </form>
-    </div>
-  </main>
+      renderHeader("lost");
+      renderFooter();
 
-  <script src="js/app.js"></script>
-  <script>
-    renderHeader('lost');
-    renderFooter();
+      // ============================================================
+      // PAGE INITIALIZATION
+      // ============================================================
 
-    // Autofill user info if logged in
-    document.addEventListener("DOMContentLoaded", () => {
-      // Set default date to today
-      const today = new Date().toISOString().split('T')[0];
-      document.getElementById("date").value = today;
+      document.addEventListener("DOMContentLoaded", () => {
+        // Set today's date
+        const today = new Date().toISOString().split("T")[0];
 
-      if (AppState.currentUser) {
-        document.getElementById("student_name").value = AppState.currentUser.name || "";
-        document.getElementById("email").value = AppState.currentUser.email || "";
-        document.getElementById("contact_info").value = AppState.currentUser.phone || "";
-      }
-    });
+        const dateInput = document.getElementById("date");
 
-    const form = document.getElementById("lost-form");
-    const alertBox = document.getElementById("alert-box");
-    const submitBtn = document.getElementById("submit-btn");
-
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-
-      // Form validation
-      const studentName = document.getElementById("student_name").value.trim();
-      const email = document.getElementById("email").value.trim();
-      const category = document.getElementById("category").value;
-      const itemName = document.getElementById("item_name").value.trim();
-      const description = document.getElementById("description").value.trim();
-      const location = document.getElementById("location").value.trim();
-      const date = document.getElementById("date").value;
-      const contactInfo = document.getElementById("contact_info").value.trim() || email;
-      const imageUrl = document.getElementById("image_url").value.trim();
-
-      if (!studentName || !email || !category || !itemName || !description || !location || !date) {
-        alertBox.className = "alert alert-danger";
-        alertBox.innerHTML = "⚠️ Please fill in all required fields.";
-        alertBox.style.display = "block";
-        return;
-      }
-
-      submitBtn.disabled = true;
-      submitBtn.textContent = "Saving and checking matches...";
-
-      try {
-        const payload = {
-          user_id: AppState.currentUser ? AppState.currentUser.id : 1,
-          student_name: studentName,
-          email: email,
-          item_type: "lost",
-          category,
-          item_name: itemName,
-          description,
-          location,
-          date,
-          contact_info: contactInfo,
-          image: imageUrl || null
-        };
-
-        const newItem = await apiFetch("/items/lost", {
-          method: "POST",
-          body: JSON.stringify(payload)
-        });
-
-        // Automatically synchronize the active logged-in user profile
-        if (newItem.user) {
-          AppState.setUser(newItem.user);
+        if (dateInput) {
+          dateInput.value = today;
         }
 
-        // Check if smart matches were found for this item
-        const matches = await apiFetch(`/matches/${newItem.id}`);
-
-        if (matches && matches.length > 0) {
-          const topMatch = matches[0];
-          const matchedName = topMatch.found_item ? topMatch.found_item.item_name : "Found item";
-          const matchedLocation = topMatch.found_item ? topMatch.found_item.location : "Campus";
-          alertBox.className = "alert alert-warning";
-          alertBox.innerHTML = `
-            <div>
-              <h3 style="font-size:1.05rem; font-weight:700; margin-bottom:0.25rem;">
-                🎯 Possible Match Found! (${topMatch.match_score}% Score)
-              </h3>
-              <p style="font-size:0.9rem; margin-bottom:0.75rem;">
-                Your report <strong>"${escapeHtml(newItem.item_name)}"</strong> matched an existing found item 
-                <strong>"${escapeHtml(matchedName)}"</strong> at <strong>${escapeHtml(matchedLocation)}</strong>.
-              </p>
-              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                <a href="matches.html" class="btn btn-primary btn-sm">Review &amp; Verify Match &rarr;</a>
-                <a href="dashboard.html" class="btn btn-secondary btn-sm">📊 View in My Dashboard</a>
-              </div>
-            </div>
-          `;
-          alertBox.style.display = "block";
-          showToast(`Report saved! Found ${matches.length} possible match(es).`);
-        } else {
-          alertBox.className = "alert alert-success";
-          alertBox.innerHTML = `
-            <div>
-              <div style="font-size: 1.05rem; font-weight: 700; margin-bottom: 0.25rem;">
-                ✅ Lost report successfully submitted!
-              </div>
-              <div style="font-size: 0.9rem; margin-bottom: 0.75rem;">
-                Report <strong>#${newItem.id} (${escapeHtml(newItem.item_name)})</strong> has been added to your student dashboard.
-              </div>
-              <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                <a href="dashboard.html" class="btn btn-primary btn-sm">📊 View in My Dashboard &rarr;</a>
-                <a href="matches.html" class="btn btn-secondary btn-sm">🔍 Check Matches</a>
-              </div>
-            </div>
-          `;
-          alertBox.style.display = "block";
-          showToast("Lost item report submitted and visible in your dashboard!");
-        }
-
-        form.reset();
-        document.getElementById("date").value = new Date().toISOString().split('T')[0];
+        // Autofill logged-in user information
         if (AppState.currentUser) {
-          document.getElementById("student_name").value = AppState.currentUser.name || "";
-          document.getElementById("email").value = AppState.currentUser.email || "";
-          document.getElementById("contact_info").value = AppState.currentUser.phone || "";
+          document.getElementById("student_name").value =
+            AppState.currentUser.name || "";
+
+          document.getElementById("email").value =
+            AppState.currentUser.email || "";
+
+          document.getElementById("contact_info").value =
+            AppState.currentUser.phone || "";
+        }
+      });
+
+      // ============================================================
+      // GET FORM ELEMENTS
+      // ============================================================
+
+      const form = document.getElementById("lost-form");
+
+      const alertBox = document.getElementById("alert-box");
+
+      const submitBtn = document.getElementById("submit-btn");
+
+      // ============================================================
+      // SHOW ALERT
+      // ============================================================
+
+      function showAlert(message, type = "success") {
+        alertBox.className = `alert alert-${type}`;
+
+        alertBox.innerHTML = message;
+
+        alertBox.style.display = "block";
+
+        alertBox.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }
+
+      // ============================================================
+      // FORM SUBMISSION
+      // ============================================================
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        // ----------------------------------------------------------
+        // CHECK LOGIN
+        // ----------------------------------------------------------
+
+        if (!AppState.currentUser) {
+          showAlert(
+            "⚠️ Please login before submitting a lost item report.",
+            "danger",
+          );
+
+          setTimeout(() => {
+            window.location.href = "login.html";
+          }, 1500);
+
+          return;
         }
 
-      } catch (err) {
-        alertBox.className = "alert alert-danger";
-        alertBox.innerHTML = `❌ Error: ${escapeHtml(err.message || 'Failed to submit report')}`;
-        alertBox.style.display = "block";
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = "Submit Lost Item Report";
-      }
-    });
-  </script>
-</body>
+        // ----------------------------------------------------------
+        // GET USER ID
+        // ----------------------------------------------------------
+
+        const userId = AppState.currentUser.id;
+
+        if (!userId) {
+          showAlert(
+            "❌ User information is missing. Please login again.",
+            "danger",
+          );
+
+          return;
+        }
+
+        // ----------------------------------------------------------
+        // GET FORM VALUES
+        // ----------------------------------------------------------
+
+        const studentName = document
+          .getElementById("student_name")
+          .value.trim();
+
+        const email = document.getElementById("email").value.trim();
+
+        const category = document.getElementById("category").value;
+
+        const itemName = document.getElementById("item_name").value.trim();
+
+        const description = document.getElementById("description").value.trim();
+
+        const location = document.getElementById("location").value.trim();
+
+        const date = document.getElementById("date").value;
+
+        const contactInfo =
+          document.getElementById("contact_info").value.trim() || email;
+
+        const imageUrl = document.getElementById("image_url").value.trim();
+
+        // ----------------------------------------------------------
+        // VALIDATION
+        // ----------------------------------------------------------
+
+        if (
+          !studentName ||
+          !email ||
+          !category ||
+          !itemName ||
+          !description ||
+          !location ||
+          !date
+        ) {
+          showAlert("⚠️ Please fill in all required fields.", "danger");
+
+          return;
+        }
+
+        // ----------------------------------------------------------
+        // DISABLE BUTTON
+        // ----------------------------------------------------------
+
+        submitBtn.disabled = true;
+
+        submitBtn.textContent = "Saving and checking matches...";
+
+        try {
+          // ========================================================
+          // CREATE REQUEST BODY
+          // ========================================================
+
+          const payload = {
+            item_type: "lost",
+
+            category: category,
+
+            item_name: itemName,
+
+            description: description,
+
+            location: location,
+
+            date: date,
+
+            contact_info: contactInfo,
+
+            image: imageUrl || null,
+          };
+
+          console.log("Submitting lost item:", payload);
+
+          console.log("User ID:", userId);
+
+          // ========================================================
+          // SEND LOST ITEM TO FASTAPI
+          // ========================================================
+
+          const newItem = await apiFetch(`/items/lost?user_id=${userId}`, {
+            method: "POST",
+
+            body: JSON.stringify(payload),
+          });
+
+          console.log("Lost item created:", newItem);
+
+          // ========================================================
+          // SUCCESSFULLY SAVED
+          // ========================================================
+
+          showAlert(
+            `
+        <div>
+
+          <h3
+            style="
+              font-size:1.05rem;
+              font-weight:700;
+              margin-bottom:0.25rem;
+            "
+          >
+            ✅ Lost report successfully submitted!
+          </h3>
+
+          <p
+            style="
+              font-size:0.9rem;
+              margin-bottom:0.75rem;
+            "
+          >
+            Your report
+            <strong>
+              #${newItem.id}
+              (${escapeHTML(newItem.item_name)})
+            </strong>
+            has been successfully saved.
+          </p>
+
+          <div
+            style="
+              display:flex;
+              gap:0.5rem;
+              flex-wrap:wrap;
+            "
+          >
+
+            <a
+              href="dashboard.html"
+              class="btn btn-primary btn-sm"
+            >
+              📊 View Dashboard →
+            </a>
+
+            <a
+              href="matches.html"
+              class="btn btn-secondary btn-sm"
+            >
+              🔍 Check Matches
+            </a>
+
+          </div>
+
+        </div>
+        `,
+            "success",
+          );
+
+          // ========================================================
+          // CHECK SMART MATCHES
+          // ========================================================
+
+          try {
+            const matches = await apiFetch(`/matches/${newItem.id}`);
+
+            console.log("Matches found:", matches);
+
+            if (matches && Array.isArray(matches) && matches.length > 0) {
+              const topMatch = matches[0];
+
+              const matchedName = topMatch.found_item
+                ? topMatch.found_item.item_name
+                : "Found item";
+
+              const matchedLocation = topMatch.found_item
+                ? topMatch.found_item.location
+                : "Campus";
+
+              const matchScore = topMatch.match_score || 0;
+
+              showAlert(
+                `
+            <div>
+
+              <h3
+                style="
+                  font-size:1.05rem;
+                  font-weight:700;
+                  margin-bottom:0.25rem;
+                "
+              >
+                🎯 Possible Match Found!
+                (${matchScore}% Score)
+              </h3>
+
+              <p
+                style="
+                  font-size:0.9rem;
+                  margin-bottom:0.75rem;
+                "
+              >
+
+                Your report
+                <strong>
+                  "${escapeHTML(newItem.item_name)}"
+                </strong>
+
+                matched an existing found item
+
+                <strong>
+                  "${escapeHTML(matchedName)}"
+                </strong>
+
+                at
+
+                <strong>
+                  ${escapeHTML(matchedLocation)}
+                </strong>.
+
+              </p>
+
+
+              <div
+                style="
+                  display:flex;
+                  gap:0.5rem;
+                  flex-wrap:wrap;
+                "
+              >
+
+                <a
+                  href="matches.html"
+                  class="btn btn-primary btn-sm"
+                >
+                  🎯 Review & Verify Match →
+                </a>
+
+                <a
+                  href="dashboard.html"
+                  class="btn btn-secondary btn-sm"
+                >
+                  📊 View Dashboard
+                </a>
+
+              </div>
+
+            </div>
+            `,
+                "warning",
+              );
+
+              if (typeof showToast === "function") {
+                showToast(
+                  `Report saved! Found ${matches.length} possible match(es).`,
+                );
+              }
+            }
+          } catch (matchError) {
+            // The report was already saved.
+            // A matching error should NOT make the user
+            // think that the report failed.
+
+            console.error("Matching error:", matchError);
+
+            console.log(
+              "Report saved successfully, but matching could not be completed.",
+            );
+          }
+
+          // ========================================================
+          // RESET FORM
+          // ========================================================
+
+          form.reset();
+
+          // Restore today's date
+
+          document.getElementById("date").value = new Date()
+            .toISOString()
+            .split("T")[0];
+
+          // Restore logged-in user information
+
+          if (AppState.currentUser) {
+            document.getElementById("student_name").value =
+              AppState.currentUser.name || "";
+
+            document.getElementById("email").value =
+              AppState.currentUser.email || "";
+
+            document.getElementById("contact_info").value =
+              AppState.currentUser.phone || "";
+          }
+        } catch (error) {
+          // ========================================================
+          // ERROR
+          // ========================================================
+
+          console.error("Lost report submission error:", error);
+
+          showAlert(
+            `
+        ❌ Error:
+        ${escapeHTML(error.message || "Failed to submit lost item report.")}
+        `,
+            "danger",
+          );
+        } finally {
+          // ========================================================
+          // ENABLE BUTTON AGAIN
+          // ========================================================
+
+          submitBtn.disabled = false;
+
+          submitBtn.textContent = "Submit Lost Item Report";
+        }
+      });
+    </script>
+  </body>
 </html>
