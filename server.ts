@@ -4,268 +4,445 @@ import fs from "fs";
 import crypto from "crypto";
 import initSqlJs, { Database } from "sql.js";
 
-function getAppDir() {
+function getAppDir(): string {
   try {
-    // In CommonJS environments
     if (typeof __dirname !== "undefined") {
       return __dirname;
     }
-  } catch {}
+  } catch {
+    // Ignore
+  }
+
   return process.cwd();
 }
-const appDir = getAppDir();
 
+const appDir = getAppDir();
 const app = express();
 const PORT = 3000;
 
-// Enable CORS and preflight handling
+// ====================================================
+// CORS
+// ====================================================
+
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+  res.header(
+    "Access-Control-Allow-Headers",
+    "Origin, X-Requested-With, Content-Type, Accept, Authorization",
+  );
+
   if (req.method === "OPTIONS") {
     return res.sendStatus(200);
   }
+
   next();
 });
 
-// Safe Body Parsing that supports standard server, express, and Vercel serverless
-app.use((req: any, res: any, next: any) => {
-  if (req.body !== undefined && req.body !== null) {
-    if (typeof req.body === "string" && req.body.trim()) {
-      try {
-        req.body = JSON.parse(req.body);
-      } catch {
-        // preserve
-      }
-    }
-    req._parsedBody = req.body;
-  }
-  next();
-});
+// ====================================================
+// BODY PARSING
+// ====================================================
 
-app.use((req: any, res: any, next: any) => {
-  if (req._parsedBody !== undefined) {
-    req.body = req._parsedBody;
-    return next();
-  }
-  express.json({ limit: "15mb" })(req, res, next);
-});
+app.use(
+  express.json({
+    limit: "15mb",
+  }),
+);
 
-app.use((req: any, res: any, next: any) => {
-  if (req._parsedBody !== undefined) {
-    req.body = req._parsedBody;
-    return next();
-  }
-  express.urlencoded({ extended: true, limit: "15mb" })(req, res, next);
-});
+app.use(
+  express.urlencoded({
+    extended: true,
+    limit: "15mb",
+  }),
+);
 
-// Database directory setup
+// ====================================================
+// DATABASE
+// ====================================================
+
 const isVercel = Boolean(process.env.VERCEL);
+
 const dbDir = isVercel ? "/tmp" : path.join(process.cwd(), "database");
+
 if (!fs.existsSync(dbDir)) {
   try {
     fs.mkdirSync(dbDir, { recursive: true });
-  } catch (err) {
-    console.warn("Notice: could not create database directory:", err);
+  } catch (error) {
+    console.warn("Could not create database directory:", error);
   }
 }
+
 const dbFilePath = path.join(dbDir, "lost_found.db");
 
 let db: Database;
 
-function saveDatabase() {
+// ====================================================
+// DATABASE HELPERS
+// ====================================================
+
+function saveDatabase(): void {
   try {
-    if (db) {
-      const binaryArray = db.export();
-      const buffer = Buffer.from(binaryArray);
-      fs.writeFileSync(dbFilePath, buffer);
+    if (!db) {
+      return;
     }
-  } catch (err) {
-    console.warn("Failed to persist SQLite database (read-only environment):", err);
+
+    const binaryArray = db.export();
+    const buffer = Buffer.from(binaryArray);
+
+    fs.writeFileSync(dbFilePath, buffer);
+
+    console.log("SQLite database saved successfully.");
+  } catch (error) {
+    console.error("Failed to save SQLite database:", error);
   }
+}
+
+function escapeSql(value: unknown): string {
+  return String(value ?? "").replace(/'/g, "''");
 }
 
 function queryAll(sql: string): any[] {
   try {
-    if (!db) return [];
-    const res = db.exec(sql);
-    if (!res || !res[0] || !res[0].columns || !res[0].values) return [];
-    const cols = res[0].columns;
-    return res[0].values.map(row => Object.fromEntries(cols.map((c, i) => [c, row[i]])));
-  } catch (err) {
-    console.error("queryAll error:", err, "SQL:", sql);
+    if (!db) {
+      return [];
+    }
+
+    const result = db.exec(sql);
+
+    if (!result || !result[0] || !result[0].columns || !result[0].values) {
+      return [];
+    }
+
+    const columns = result[0].columns;
+
+    return result[0].values.map((row) =>
+      Object.fromEntries(columns.map((column, index) => [column, row[index]])),
+    );
+  } catch (error) {
+    console.error("queryAll error:", error);
+
+    console.error("SQL:", sql);
+
     return [];
   }
 }
 
 function queryOne(sql: string): any | null {
   const rows = queryAll(sql);
+
   return rows.length > 0 ? rows[0] : null;
 }
 
-function queryVal(sql: string, defaultVal: number = 0): number {
+function queryVal(sql: string, defaultValue = 0): number {
   try {
-    if (!db) return defaultVal;
-    const res = db.exec(sql);
-    if (!res || !res[0] || !res[0].values || !res[0].values[0]) return defaultVal;
-    const val = Number(res[0].values[0][0]);
-    return isNaN(val) ? defaultVal : val;
+    if (!db) {
+      return defaultValue;
+    }
+
+    const result = db.exec(sql);
+
+    if (!result || !result[0] || !result[0].values || !result[0].values[0]) {
+      return defaultValue;
+    }
+
+    const value = Number(result[0].values[0][0]);
+
+    return Number.isNaN(value) ? defaultValue : value;
   } catch {
-    return defaultVal;
+    return defaultValue;
   }
 }
 
 function getLastInsertId(table: string): number {
   try {
-    const res = db.exec("SELECT last_insert_rowid() as id;");
-    const val = Number(res[0]?.values?.[0]?.[0]);
-    if (val && val > 0) return val;
-  } catch {}
-  const maxRow = queryOne(`SELECT MAX(id) as id FROM ${table};`);
-  return Number(maxRow?.id) || 1;
+    const result = db.exec("SELECT last_insert_rowid() AS id;");
+
+    const value = Number(result[0]?.values?.[0]?.[0]);
+
+    if (value > 0) {
+      return value;
+    }
+  } catch {
+    // Fallback below
+  }
+
+  const row = queryOne(`SELECT MAX(id) AS id FROM ${table};`);
+
+  return Number(row?.id) || 1;
 }
+
+// ====================================================
+// PASSWORD
+// ====================================================
 
 function hashPassword(password: string): string {
   const salt = "campus_lost_found_salt";
-  return crypto.createHash("sha256").update(password + salt).digest("hex");
+
+  return crypto
+    .createHash("sha256")
+    .update(password + salt)
+    .digest("hex");
 }
 
-// ----------------------------------------------------
-// Explainable Smart Matching Algorithm (Mirroring Python)
-// ----------------------------------------------------
+// ====================================================
+// TEXT MATCHING
+// ====================================================
+
 function cleanText(text: string): string {
-  if (!text) return "";
-  return text.toLowerCase().replace(/[^\w\s]/g, " ").replace(/\s+/g, " ").trim();
+  if (!text) {
+    return "";
+  }
+
+  return text
+    .toLowerCase()
+    .replace(/[^\w\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function extractKeywords(text: string): Set<string> {
   const stopWords = new Set([
-    "a", "an", "the", "in", "on", "at", "near", "by", "of", "and", "or", "is",
-    "it", "was", "for", "to", "my", "i", "found", "lost", "some", "with", "this"
+    "a",
+    "an",
+    "the",
+    "in",
+    "on",
+    "at",
+    "near",
+    "by",
+    "of",
+    "and",
+    "or",
+    "is",
+    "it",
+    "was",
+    "for",
+    "to",
+    "my",
+    "i",
+    "found",
+    "lost",
+    "some",
+    "with",
+    "this",
   ]);
-  const words = cleanText(text).split(" ");
-  return new Set(words.filter(w => w.length > 2 && !stopWords.has(w)));
+
+  const words = cleanText(text).split(" ").filter(Boolean);
+
+  return new Set(
+    words.filter((word) => word.length > 2 && !stopWords.has(word)),
+  );
 }
 
 function calculateMatchScore(lostItem: any, foundItem: any) {
   const explanations: string[] = [];
 
-  // 1. Category Match (30 points)
-  let categoryPoints = 0;
-  const lostCat = (lostItem.category || "").trim().toLowerCase();
-  const foundCat = (foundItem.category || "").trim().toLowerCase();
+  // --------------------------------------------
+  // 1. CATEGORY - 30 POINTS
+  // --------------------------------------------
 
-  if (lostCat && foundCat && lostCat === foundCat) {
+  let categoryPoints = 0;
+
+  const lostCategory = cleanText(lostItem.category || "");
+
+  const foundCategory = cleanText(foundItem.category || "");
+
+  if (lostCategory && foundCategory && lostCategory === foundCategory) {
     categoryPoints = 30;
-    explanations.push(`Category matched exactly (${lostItem.category}): +30 pts`);
+
+    explanations.push(
+      `Category matched exactly (${lostItem.category}): +30 pts`,
+    );
   } else {
-    explanations.push(`Categories differ ('${lostItem.category}' vs '${foundItem.category}'): 0 pts`);
+    explanations.push(
+      `Categories differ ('${lostItem.category}' vs '${foundItem.category}'): 0 pts`,
+    );
   }
 
-  // 2. Item Name Match (25 points)
+  // --------------------------------------------
+  // 2. ITEM NAME - 25 POINTS
+  // --------------------------------------------
+
   let namePoints = 0;
+
   const lostName = cleanText(lostItem.item_name || "");
+
   const foundName = cleanText(foundItem.item_name || "");
 
-  if (lostName === foundName && lostName) {
+  if (lostName && foundName && lostName === foundName) {
     namePoints = 25;
-    explanations.push(`Item name exact match ('${lostItem.item_name}'): +25 pts`);
-  } else if (lostName && foundName && (lostName.includes(foundName) || foundName.includes(lostName))) {
+
+    explanations.push(
+      `Item name exact match ('${lostItem.item_name}'): +25 pts`,
+    );
+  } else if (
+    lostName &&
+    foundName &&
+    (lostName.includes(foundName) || foundName.includes(lostName))
+  ) {
     namePoints = 20;
-    explanations.push(`Item name partial/contained match: +20 pts`);
+
+    explanations.push("Item name partial/contained match: +20 pts");
   } else {
     const lostWords = extractKeywords(lostItem.item_name || "");
+
     const foundWords = extractKeywords(foundItem.item_name || "");
+
     const overlap: string[] = [];
-    lostWords.forEach(w => {
-      if (foundWords.has(w)) overlap.push(w);
+
+    lostWords.forEach((word) => {
+      if (foundWords.has(word)) {
+        overlap.push(word);
+      }
     });
 
     if (overlap.length > 0) {
-      const ratio = overlap.length / Math.max(lostWords.size, foundWords.size, 1);
+      const ratio =
+        overlap.length / Math.max(lostWords.size, foundWords.size, 1);
+
       namePoints = Math.min(25, Math.round(ratio * 25));
-      explanations.push(`Item name shared terms (${overlap.join(", ")}): +${namePoints} pts`);
+
+      explanations.push(
+        `Item name shared terms (${overlap.join(", ")}): +${namePoints} pts`,
+      );
     } else {
       explanations.push("Item name has no common keywords: 0 pts");
     }
   }
 
-  // 3. Location Similarity (20 points)
-  let locationPoints = 0;
-  const lostLoc = cleanText(lostItem.location || "");
-  const foundLoc = cleanText(foundItem.location || "");
+  // --------------------------------------------
+  // 3. LOCATION - 20 POINTS
+  // --------------------------------------------
 
-  if (lostLoc === foundLoc && lostLoc) {
+  let locationPoints = 0;
+
+  const lostLocation = cleanText(lostItem.location || "");
+
+  const foundLocation = cleanText(foundItem.location || "");
+
+  if (lostLocation && foundLocation && lostLocation === foundLocation) {
     locationPoints = 20;
+
     explanations.push(`Location exact match ('${lostItem.location}'): +20 pts`);
-  } else if (lostLoc && foundLoc && (lostLoc.includes(foundLoc) || foundLoc.includes(lostLoc))) {
+  } else if (
+    lostLocation &&
+    foundLocation &&
+    (lostLocation.includes(foundLocation) ||
+      foundLocation.includes(lostLocation))
+  ) {
     locationPoints = 15;
-    explanations.push(`Location proximity match ('${lostItem.location}' & '${foundItem.location}'): +15 pts`);
+
+    explanations.push(
+      `Location proximity match ('${lostItem.location}' & '${foundItem.location}'): +15 pts`,
+    );
   } else {
-    const lostLocWords = extractKeywords(lostItem.location || "");
-    const foundLocWords = extractKeywords(foundItem.location || "");
-    const locOverlap: string[] = [];
-    lostLocWords.forEach(w => {
-      if (foundLocWords.has(w)) locOverlap.push(w);
+    const lostWords = extractKeywords(lostItem.location || "");
+
+    const foundWords = extractKeywords(foundItem.location || "");
+
+    const overlap: string[] = [];
+
+    lostWords.forEach((word) => {
+      if (foundWords.has(word)) {
+        overlap.push(word);
+      }
     });
 
-    if (locOverlap.length > 0) {
+    if (overlap.length > 0) {
       locationPoints = 10;
-      explanations.push(`Same campus zone detected (${locOverlap.join(", ")}): +10 pts`);
+
+      explanations.push(
+        `Same campus zone detected (${overlap.join(", ")}): +10 pts`,
+      );
     } else {
       explanations.push("Locations do not align: 0 pts");
     }
   }
 
-  // 4. Date Proximity (15 points)
-  let datePoints = 0;
-  try {
-    const d1 = new Date(String(lostItem.date).split("T")[0]);
-    const d2 = new Date(String(foundItem.date).split("T")[0]);
-    const diffMs = Math.abs(d2.getTime() - d1.getTime());
-    const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+  // --------------------------------------------
+  // 4. DATE - 15 POINTS
+  // --------------------------------------------
 
-    if (diffDays === 0) {
+  let datePoints = 0;
+
+  try {
+    const date1 = new Date(String(lostItem.date).split("T")[0]);
+
+    const date2 = new Date(String(foundItem.date).split("T")[0]);
+
+    const difference = Math.abs(date2.getTime() - date1.getTime());
+
+    const days = Math.round(difference / (1000 * 60 * 60 * 24));
+
+    if (days === 0) {
       datePoints = 15;
+
       explanations.push("Same day occurrence: +15 pts");
-    } else if (diffDays <= 2) {
+    } else if (days <= 2) {
       datePoints = 12;
-      explanations.push(`Within 2 days (${diffDays} day gap): +12 pts`);
-    } else if (diffDays <= 5) {
+
+      explanations.push(`Within 2 days (${days} day gap): +12 pts`);
+    } else if (days <= 5) {
       datePoints = 8;
-      explanations.push(`Within 5 days (${diffDays} day gap): +8 pts`);
-    } else if (diffDays <= 10) {
+
+      explanations.push(`Within 5 days (${days} day gap): +8 pts`);
+    } else if (days <= 10) {
       datePoints = 5;
-      explanations.push(`Within 10 days (${diffDays} day gap): +5 pts`);
+
+      explanations.push(`Within 10 days (${days} day gap): +5 pts`);
     } else {
-      explanations.push(`Dates are ${diffDays} days apart: 0 pts`);
+      explanations.push(`Dates are ${days} days apart: 0 pts`);
     }
   } catch {
-    datePoints = 0;
     explanations.push("Date format unparseable: 0 pts");
   }
 
-  // 5. Description Match (10 points)
-  let descPoints = 0;
-  const lostDescWords = extractKeywords(lostItem.description || "");
-  const foundDescWords = extractKeywords(foundItem.description || "");
-  const descOverlap: string[] = [];
-  lostDescWords.forEach(w => {
-    if (foundDescWords.has(w)) descOverlap.push(w);
+  // --------------------------------------------
+  // 5. DESCRIPTION - 10 POINTS
+  // --------------------------------------------
+
+  let descriptionPoints = 0;
+
+  const lostDescription = extractKeywords(lostItem.description || "");
+
+  const foundDescription = extractKeywords(foundItem.description || "");
+
+  const descriptionOverlap: string[] = [];
+
+  lostDescription.forEach((word) => {
+    if (foundDescription.has(word)) {
+      descriptionOverlap.push(word);
+    }
   });
 
-  if (descOverlap.length >= 3) {
-    descPoints = 10;
-    explanations.push(`High description keyword overlap (${descOverlap.slice(0, 3).join(", ")}...): +10 pts`);
-  } else if (descOverlap.length >= 1) {
-    descPoints = 5;
-    explanations.push(`Moderate description keyword overlap (${descOverlap.join(", ")}): +5 pts`);
+  if (descriptionOverlap.length >= 3) {
+    descriptionPoints = 10;
+
+    explanations.push(
+      `High description keyword overlap (${descriptionOverlap
+        .slice(0, 3)
+        .join(", ")}...): +10 pts`,
+    );
+  } else if (descriptionOverlap.length >= 1) {
+    descriptionPoints = 5;
+
+    explanations.push(
+      `Moderate description keyword overlap (${descriptionOverlap.join(
+        ", ",
+      )}): +5 pts`,
+    );
   } else {
     explanations.push("No matching keywords in description: 0 pts");
   }
 
-  const totalScore = Math.min(100, categoryPoints + namePoints + locationPoints + datePoints + descPoints);
+  const totalScore = Math.min(
+    100,
+    categoryPoints +
+      namePoints +
+      locationPoints +
+      datePoints +
+      descriptionPoints,
+  );
 
   return {
     totalScore,
@@ -274,18 +451,20 @@ function calculateMatchScore(lostItem: any, foundItem: any) {
       name_points: namePoints,
       location_points: locationPoints,
       date_points: datePoints,
-      description_points: descPoints,
+      description_points: descriptionPoints,
       total_score: totalScore,
-      explanations
-    }
+      explanations,
+    },
   };
 }
 
-// ----------------------------------------------------
-// Database Initialization & Seeding
-// ----------------------------------------------------
-async function initDatabase() {
+// ====================================================
+// DATABASE INITIALIZATION
+// ====================================================
+
+async function initDatabase(): Promise<void> {
   const SQL = await initSqlJs();
+
   let fileBuffer: Buffer | null = null;
 
   const candidatePaths = [
@@ -293,34 +472,49 @@ async function initDatabase() {
     path.join(process.cwd(), "database", "lost_found.db"),
     path.join(process.cwd(), "dist", "database", "lost_found.db"),
     path.join(appDir, "database", "lost_found.db"),
-    path.join(appDir, "..", "database", "lost_found.db")
+    path.join(appDir, "..", "database", "lost_found.db"),
   ];
 
-  for (const cand of candidatePaths) {
-    if (fs.existsSync(cand)) {
-      try {
-        fileBuffer = fs.readFileSync(cand);
-        if (fileBuffer && fileBuffer.length > 0) {
-          console.log("Loaded SQLite database from:", cand);
-          break;
-        }
-      } catch {
-        fileBuffer = null;
+  for (const candidate of candidatePaths) {
+    if (!fs.existsSync(candidate)) {
+      continue;
+    }
+
+    try {
+      const buffer = fs.readFileSync(candidate);
+
+      if (buffer.length > 0) {
+        fileBuffer = buffer;
+
+        console.log("Loaded SQLite database from:", candidate);
+
+        break;
       }
+    } catch (error) {
+      console.warn("Could not read database:", candidate);
     }
   }
 
   if (fileBuffer) {
     try {
       db = new SQL.Database(fileBuffer);
-    } catch {
+    } catch (error) {
+      console.error(
+        "Existing database could not be opened. Creating a new database.",
+      );
+
       db = new SQL.Database();
     }
   } else {
+    console.log("No existing database found. Creating new SQLite database.");
+
     db = new SQL.Database();
   }
 
-  // Create SQLite tables exactly as requested in Section 9
+  // ==================================================
+  // USERS TABLE
+  // ==================================================
+
   db.run(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -331,6 +525,10 @@ async function initDatabase() {
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
   `);
+
+  // ==================================================
+  // ITEMS TABLE
+  // ==================================================
 
   db.run(`
     CREATE TABLE IF NOT EXISTS items (
@@ -349,6 +547,10 @@ async function initDatabase() {
     );
   `);
 
+  // ==================================================
+  // MATCHES TABLE
+  // ==================================================
+
   db.run(`
     CREATE TABLE IF NOT EXISTS matches (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -361,789 +563,1646 @@ async function initDatabase() {
     );
   `);
 
-  const samplePw = hashPassword("student123");
+  // ==================================================
+  // DATABASE MIGRATION
+  // ==================================================
 
-  // Seed starter campus data if users table is empty
-  const userCountRes = db.exec("SELECT COUNT(*) as count FROM users;");
-  const count = userCountRes[0]?.values[0][0] || 0;
+  console.log("Checking SQLite database schema...");
 
-  if (count === 0) {
-    console.log("Seeding sample college campus data for immediate interview testing...");
+  const itemColumns = queryAll("PRAGMA table_info(items);");
 
-    db.run(
-      `INSERT INTO users (name, email, password, phone) VALUES 
-       ('Alex Johnson', 'alex.j@college.edu', '${samplePw}', '9876543210'),
-       ('Sarah Miller', 'sarah.m@college.edu', '${samplePw}', '9876543211'),
-       ('David Chen', 'david.c@college.edu', '${samplePw}', '9876543212'),
-       ('Mounika Dammu', 'mounikadammu83@gmail.com', '${samplePw}', '9346215946'),
-       ('Emma Watson', 'emma.w@college.edu', '${samplePw}', '9876543299'),
-       ('Gowrish', 'gowrish@gmail.com', '${samplePw}', '+919912879540');`
-    );
+  const existingColumns = new Set(
+    itemColumns.map((column: any) => String(column.name)),
+  );
 
-    // Seed Items (Matches will be automatically generated!)
+  const requiredColumns: Record<string, string> = {
+    user_id: "INTEGER",
+    item_type: "TEXT",
+    category: "TEXT",
+    item_name: "TEXT",
+    description: "TEXT",
+    location: "TEXT",
+    date: "TEXT",
+    image: "TEXT",
+    contact_info: "TEXT",
+    status: "TEXT",
+  };
+
+  for (const [columnName, columnType] of Object.entries(requiredColumns)) {
+    if (existingColumns.has(columnName)) {
+      continue;
+    }
+
+    try {
+      let defaultValue = "";
+
+      if (columnName === "status") {
+        defaultValue = " DEFAULT 'Lost'";
+      }
+
+      db.run(
+        `ALTER TABLE items ADD COLUMN ${columnName} ${columnType}${defaultValue};`,
+      );
+
+      console.log(`Database migration: added '${columnName}' column`);
+    } catch (error) {
+      console.error(`Database migration failed for '${columnName}':`, error);
+    }
+  }
+
+  // ==================================================
+  // SEED DATA
+  // ==================================================
+
+  const userCount = queryVal("SELECT COUNT(*) FROM users;");
+
+  if (userCount === 0) {
+    console.log("Seeding sample campus data...");
+
+    const samplePassword = hashPassword("student123");
+
     db.run(`
-      INSERT INTO items (user_id, item_type, category, item_name, description, location, date, contact_info, status) VALUES 
-      (1, 'lost', 'ID Card', 'Blue College ID Card', 'Blue lanyard with engineering student ID card. Name Alex Johnson printed on it.', 'Canteen', '2026-09-02', 'alex.j@college.edu', 'Lost'),
-      (2, 'found', 'ID Card', 'College ID Card', 'Found student ID card with blue ribbon near food counter.', 'Near Canteen', '2026-09-02', 'sarah.m@college.edu', 'Found'),
-      (1, 'lost', 'Electronics', 'Casio FX-991EX Calculator', 'Scientific calculator with silver sliding case. Left on desk in 2nd floor library.', 'Library 2nd Floor', '2026-09-01', 'alex.j@college.edu', 'Lost'),
-      (3, 'found', 'Electronics', 'Casio Scientific Calculator', 'Casio FX series calculator found on study table.', 'Central Library', '2026-09-01', 'david.c@college.edu', 'Found'),
-      (2, 'lost', 'Keys', 'Motorcycle Key with Honda Keychain', 'Black key with silver Honda emblem ring and red tag.', 'Main Parking Lot', '2026-08-31', 'sarah.m@college.edu', 'Lost'),
-      (3, 'found', 'Bag', 'Navy Blue Laptop Backpack', 'Dell backpack with water bottle in side pocket found near bench.', 'Sports Ground', '2026-09-02', 'david.c@college.edu', 'Found'),
-      (4, 'lost', 'Bag', 'Black Laptop Dell Bag', 'Black bag with Dell name and charger in pocket', 'Near Library', '2026-09-03', 'mounikadammu83@gmail.com', 'Lost'),
-      (4, 'lost', 'Wallet', 'Brown Leather Wallet', 'Lost wallet with student ID and cash', 'Near Library', '2026-09-03', 'mounikadammu83@gmail.com', 'Lost');
+      INSERT INTO users
+      (name, email, password, phone)
+      VALUES
+      (
+        'Alex Johnson',
+        'alex.j@college.edu',
+        '${samplePassword}',
+        '9876543210'
+      ),
+      (
+        'Sarah Miller',
+        'sarah.m@college.edu',
+        '${samplePassword}',
+        '9876543211'
+      ),
+      (
+        'David Chen',
+        'david.c@college.edu',
+        '${samplePassword}',
+        '9876543212'
+      ),
+      (
+        'Mounika Dammu',
+        'mounikadammu83@gmail.com',
+        '${samplePassword}',
+        '9346215946'
+      ),
+      (
+        'Emma Watson',
+        'emma.w@college.edu',
+        '${samplePassword}',
+        '9876543299'
+      ),
+      (
+        'Gowrish',
+        'gowrish@gmail.com',
+        '${samplePassword}',
+        '+919912879540'
+      );
+    `);
+
+    db.run(`
+      INSERT INTO items
+      (
+        user_id,
+        item_type,
+        category,
+        item_name,
+        description,
+        location,
+        date,
+        contact_info,
+        status
+      )
+      VALUES
+      (
+        1,
+        'lost',
+        'ID Card',
+        'Blue College ID Card',
+        'Blue lanyard with engineering student ID card. Name Alex Johnson printed on it.',
+        'Canteen',
+        '2026-09-02',
+        'alex.j@college.edu',
+        'Lost'
+      ),
+      (
+        2,
+        'found',
+        'ID Card',
+        'College ID Card',
+        'Found student ID card with blue ribbon near food counter.',
+        'Near Canteen',
+        '2026-09-02',
+        'sarah.m@college.edu',
+        'Found'
+      ),
+      (
+        1,
+        'lost',
+        'Electronics',
+        'Casio FX-991EX Calculator',
+        'Scientific calculator with silver sliding case. Left on desk in 2nd floor library.',
+        'Library 2nd Floor',
+        '2026-09-01',
+        'alex.j@college.edu',
+        'Lost'
+      ),
+      (
+        3,
+        'found',
+        'Electronics',
+        'Casio Scientific Calculator',
+        'Casio FX series calculator found on study table.',
+        'Central Library',
+        '2026-09-01',
+        'david.c@college.edu',
+        'Found'
+      ),
+      (
+        2,
+        'lost',
+        'Keys',
+        'Motorcycle Key with Honda Keychain',
+        'Black key with silver Honda emblem ring and red tag.',
+        'Main Parking Lot',
+        '2026-08-31',
+        'sarah.m@college.edu',
+        'Lost'
+      ),
+      (
+        3,
+        'found',
+        'Bag',
+        'Navy Blue Laptop Backpack',
+        'Dell backpack with water bottle in side pocket found near bench.',
+        'Sports Ground',
+        '2026-09-02',
+        'david.c@college.edu',
+        'Found'
+      ),
+      (
+        4,
+        'lost',
+        'Bag',
+        'Black Laptop Dell Bag',
+        'Black bag with Dell name and charger in pocket.',
+        'Near Library',
+        '2026-09-03',
+        'mounikadammu83@gmail.com',
+        'Lost'
+      ),
+      (
+        4,
+        'lost',
+        'Wallet',
+        'Brown Leather Wallet',
+        'Lost wallet with student ID and cash.',
+        'Near Library',
+        '2026-09-03',
+        'mounikadammu83@gmail.com',
+        'Lost'
+      );
     `);
 
     saveDatabase();
   } else {
-    // Ensure Mounika Dammu is present and can sign in with student123
-    const mounikaCheck = queryOne(`SELECT id FROM users WHERE LOWER(email) = 'mounikadammu83@gmail.com';`);
-    if (!mounikaCheck) {
-      db.run(`INSERT INTO users (name, email, password, phone) VALUES ('Mounika Dammu', 'mounikadammu83@gmail.com', '${samplePw}', '9346215946');`);
+    // Ensure Mounika exists
+    const mounika = queryOne(`
+        SELECT id
+        FROM users
+        WHERE LOWER(email) =
+        'mounikadammu83@gmail.com';
+      `);
+
+    if (!mounika) {
+      const password = hashPassword("student123");
+
+      db.run(`
+        INSERT INTO users
+        (name, email, password, phone)
+        VALUES
+        (
+          'Mounika Dammu',
+          'mounikadammu83@gmail.com',
+          '${password}',
+          '9346215946'
+        );
+      `);
+
       saveDatabase();
     }
   }
 
-  // Trigger matching check on boot
   runMatchingEngineOnAll();
 }
 
-function runMatchingEngineOnAll() {
+// ====================================================
+// MATCHING ENGINE
+// ====================================================
+
+function runMatchingEngineOnAll(): void {
   try {
-    const lostRows = queryAll("SELECT * FROM items WHERE item_type = 'lost' AND status IN ('Lost', 'Possible Match');");
-    const foundRows = queryAll("SELECT * FROM items WHERE item_type = 'found' AND status IN ('Found', 'Possible Match');");
+    const lostItems = queryAll(`
+        SELECT *
+        FROM items
+        WHERE item_type = 'lost'
+        AND status IN
+        ('Lost', 'Possible Match');
+      `);
 
-    if (lostRows.length === 0 || foundRows.length === 0) return;
+    const foundItems = queryAll(`
+        SELECT *
+        FROM items
+        WHERE item_type = 'found'
+        AND status IN
+        ('Found', 'Possible Match');
+      `);
 
-    for (const lost of lostRows) {
-      for (const found of foundRows) {
-        // Check if match already exists
-        const checkMatch = queryOne(`SELECT id FROM matches WHERE lost_item_id = ${lost.id} AND found_item_id = ${found.id};`);
-        if (checkMatch) continue;
+    if (lostItems.length === 0 || foundItems.length === 0) {
+      return;
+    }
 
-        const { totalScore, breakdown } = calculateMatchScore(lost, found);
-        if (totalScore >= 50) {
-          const breakdownStr = JSON.stringify(breakdown).replace(/'/g, "''");
-          db.run(`
-            INSERT INTO matches (lost_item_id, found_item_id, match_score, score_breakdown, status)
-            VALUES (${lost.id}, ${found.id}, ${totalScore}, '${breakdownStr}', 'Suggested');
+    for (const lost of lostItems) {
+      for (const found of foundItems) {
+        const existing = queryOne(`
+            SELECT id
+            FROM matches
+            WHERE lost_item_id =
+              ${Number(lost.id)}
+            AND found_item_id =
+              ${Number(found.id)};
           `);
 
-          db.run(`UPDATE items SET status = 'Possible Match' WHERE id = ${lost.id} AND status = 'Lost';`);
-          db.run(`UPDATE items SET status = 'Possible Match' WHERE id = ${found.id} AND status = 'Found';`);
+        if (existing) {
+          continue;
+        }
+
+        const { totalScore, breakdown } = calculateMatchScore(lost, found);
+
+        if (totalScore >= 50) {
+          const breakdownText = escapeSql(JSON.stringify(breakdown));
+
+          db.run(`
+            INSERT INTO matches
+            (
+              lost_item_id,
+              found_item_id,
+              match_score,
+              score_breakdown,
+              status
+            )
+            VALUES
+            (
+              ${Number(lost.id)},
+              ${Number(found.id)},
+              ${totalScore},
+              '${breakdownText}',
+              'Suggested'
+            );
+          `);
+
+          db.run(`
+            UPDATE items
+            SET status = 'Possible Match'
+            WHERE id =
+              ${Number(lost.id)}
+            AND status = 'Lost';
+          `);
+
+          db.run(`
+            UPDATE items
+            SET status = 'Possible Match'
+            WHERE id =
+              ${Number(found.id)}
+            AND status = 'Found';
+          `);
         }
       }
     }
+
     saveDatabase();
-  } catch (err) {
-    console.error("Error during initial matching run:", err);
+  } catch (error) {
+    console.error("Matching engine error:", error);
   }
 }
 
-function checkMatchesForSingleItem(newItemId: number, itemType: string) {
+function checkMatchesForSingleItem(newItemId: number, itemType: string): void {
   try {
-    const currentItem = queryOne(`SELECT * FROM items WHERE id = ${newItemId};`);
-    if (!currentItem) return;
+    const currentItem = queryOne(`
+        SELECT *
+        FROM items
+        WHERE id =
+          ${Number(newItemId)};
+      `);
+
+    if (!currentItem) {
+      return;
+    }
 
     const oppositeType = itemType === "lost" ? "found" : "lost";
-    const candidates = queryAll(`SELECT * FROM items WHERE item_type = '${oppositeType}' AND status IN ('Lost', 'Found', 'Possible Match');`);
-    if (candidates.length === 0) return;
 
-    let matchesFound = 0;
+    const candidates = queryAll(`
+        SELECT *
+        FROM items
+        WHERE item_type =
+          '${escapeSql(oppositeType)}'
+        AND status IN
+          ('Lost', 'Found', 'Possible Match');
+      `);
+
     for (const candidate of candidates) {
-      const lostObj = itemType === "lost" ? currentItem : candidate;
-      const foundObj = itemType === "lost" ? candidate : currentItem;
+      const lostItem = itemType === "lost" ? currentItem : candidate;
 
-      const checkMatch = queryOne(`SELECT id FROM matches WHERE lost_item_id = ${lostObj.id} AND found_item_id = ${foundObj.id};`);
-      if (checkMatch) continue;
+      const foundItem = itemType === "lost" ? candidate : currentItem;
 
-      const { totalScore, breakdown } = calculateMatchScore(lostObj, foundObj);
-      if (totalScore >= 50) {
-        const breakdownStr = JSON.stringify(breakdown).replace(/'/g, "''");
-        db.run(`
-          INSERT INTO matches (lost_item_id, found_item_id, match_score, score_breakdown, status)
-          VALUES (${lostObj.id}, ${foundObj.id}, ${totalScore}, '${breakdownStr}', 'Suggested');
+      const existing = queryOne(`
+          SELECT id
+          FROM matches
+          WHERE lost_item_id =
+            ${Number(lostItem.id)}
+          AND found_item_id =
+            ${Number(foundItem.id)};
         `);
 
-        db.run(`UPDATE items SET status = 'Possible Match' WHERE id = ${lostObj.id} AND status = 'Lost';`);
-        db.run(`UPDATE items SET status = 'Possible Match' WHERE id = ${foundObj.id} AND status = 'Found';`);
-        matchesFound++;
+      if (existing) {
+        continue;
+      }
+
+      const { totalScore, breakdown } = calculateMatchScore(
+        lostItem,
+        foundItem,
+      );
+
+      if (totalScore >= 50) {
+        const breakdownText = escapeSql(JSON.stringify(breakdown));
+
+        db.run(`
+          INSERT INTO matches
+          (
+            lost_item_id,
+            found_item_id,
+            match_score,
+            score_breakdown,
+            status
+          )
+          VALUES
+          (
+            ${Number(lostItem.id)},
+            ${Number(foundItem.id)},
+            ${totalScore},
+            '${breakdownText}',
+            'Suggested'
+          );
+        `);
+
+        db.run(`
+          UPDATE items
+          SET status = 'Possible Match'
+          WHERE id =
+            ${Number(lostItem.id)}
+          AND status = 'Lost';
+        `);
+
+        db.run(`
+          UPDATE items
+          SET status = 'Possible Match'
+          WHERE id =
+            ${Number(foundItem.id)}
+          AND status = 'Found';
+        `);
       }
     }
 
-    if (matchesFound > 0) {
-      saveDatabase();
-    }
-  } catch (err) {
-    console.error("Error checking matches for item:", err);
+    saveDatabase();
+  } catch (error) {
+    console.error("Single-item matching error:", error);
   }
 }
 
-// ----------------------------------------------------
-// API ROUTES
-// ----------------------------------------------------
+// ====================================================
+// HEALTH
+// ====================================================
 
-// Health
 app.get("/api/health", (req, res) => {
-  res.json({ status: "ok", service: "Smart Student Lost & Found Management System" });
+  res.json({
+    status: "ok",
+    service: "Smart Student Lost & Found Management System",
+  });
 });
 
-// 1. Auth: Register
+// ====================================================
+// REGISTER
+// ====================================================
+
 app.post(["/api/register", "/register"], (req, res) => {
   try {
     const { name, email, password, phone } = req.body || {};
+
     if (!name || !email || !password) {
-      return res.status(400).json({ detail: "Name, email, and password are required." });
+      return res.status(400).json({
+        detail: "Name, email, and password are required.",
+      });
     }
+
     const cleanName = String(name).trim();
+
     const emailNorm = String(email).trim().toLowerCase();
-    const cleanPhone = phone ? String(phone).trim() : "";
+
     const cleanPassword = String(password).trim();
 
+    const cleanPhone = phone ? String(phone).trim() : "";
+
     if (cleanName.length < 2) {
-      return res.status(400).json({ detail: "Please provide a valid full name (minimum 2 characters)." });
+      return res.status(400).json({
+        detail: "Please provide a valid full name.",
+      });
     }
 
     if (!emailNorm.includes("@") || !emailNorm.includes(".")) {
-      return res.status(400).json({ detail: "Please provide a valid email address." });
+      return res.status(400).json({
+        detail: "Please provide a valid email address.",
+      });
     }
 
     if (cleanPassword.length < 6) {
-      return res.status(400).json({ detail: "Password must be at least 6 characters long." });
+      return res.status(400).json({
+        detail: "Password must be at least 6 characters.",
+      });
     }
 
-    const safeEmail = emailNorm.replace(/'/g, "''");
-    const existing = queryOne(`SELECT id, name, email, phone FROM users WHERE LOWER(email) = '${safeEmail}';`);
+    const safeEmail = escapeSql(emailNorm);
+
+    const existing = queryOne(`
+          SELECT id, name, email, phone
+          FROM users
+          WHERE LOWER(email) =
+            '${safeEmail}';
+        `);
+
     if (existing) {
       return res.status(200).json({
-        message: "Account already exists - logged in directly",
+        message: "Account already exists.",
         user: existing,
-        ...existing
+        ...existing,
       });
     }
 
     const hashed = hashPassword(cleanPassword);
+
     db.run(`
-      INSERT INTO users (name, email, password, phone)
-      VALUES ('${cleanName.replace(/'/g, "''")}', '${safeEmail}', '${hashed}', '${cleanPhone.replace(/'/g, "''")}');
-    `);
+        INSERT INTO users
+        (
+          name,
+          email,
+          password,
+          phone
+        )
+        VALUES
+        (
+          '${escapeSql(cleanName)}',
+          '${safeEmail}',
+          '${hashed}',
+          '${escapeSql(cleanPhone)}'
+        );
+      `);
 
     const newId = getLastInsertId("users");
+
     saveDatabase();
 
-    const created = queryOne(`SELECT id, name, email, phone FROM users WHERE id = ${newId};`);
-    const userObj = created || {
-      id: newId,
-      name: cleanName,
-      email: emailNorm,
-      phone: cleanPhone
-    };
+    const user = queryOne(`
+          SELECT id, name, email, phone
+          FROM users
+          WHERE id =
+            ${newId};
+        `);
 
-    res.status(201).json({
-      message: "Registration successful",
-      user: userObj,
-      ...userObj
+    return res.status(201).json({
+      message: "Registration successful.",
+      user,
+      ...user,
     });
-  } catch (err: any) {
-    console.error("Register error handled gracefully:", err);
-    res.status(200).json({
-      message: "Registration completed (open access)",
-      user: {
-        id: 4,
-        name: "Mounika Dammu",
-        email: "mounikadammu83@gmail.com",
-        phone: "9346215946"
-      }
+  } catch (error: any) {
+    console.error("Register error:", error);
+
+    return res.status(500).json({
+      detail: error?.message || "Registration failed.",
     });
   }
 });
 
-// 2. Auth: Login (Name and Email login)
+// ====================================================
+// LOGIN
+// ====================================================
+
 app.post(["/api/login", "/login", "/api/auth/login"], (req, res) => {
   try {
     const { name, email, phone } = req.body || {};
-    const emailNorm = email ? String(email).trim().toLowerCase() : "";
-    if (!emailNorm) {
-      return res.status(400).json({ detail: "Please provide your email address to sign in." });
+
+    if (!email) {
+      return res.status(400).json({
+        detail: "Please provide your email address.",
+      });
     }
 
-    const safeEmail = emailNorm.replace(/'/g, "''");
-    let nameNorm = name ? String(name).trim() : "";
-    if (!nameNorm) {
-      if (emailNorm.includes("mounika")) {
-        nameNorm = "Mounika Dammu";
-      } else {
-        const localPart = emailNorm.split("@")[0] || "Student";
-        nameNorm = localPart
-          .replace(/[._-]/g, " ")
-          .replace(/\b\w/g, (char) => char.toUpperCase());
-      }
-    }
-    const safeName = nameNorm.replace(/'/g, "''");
-    const safePhone = phone ? String(phone).trim().replace(/'/g, "''") : "9346215946";
+    const emailNorm = String(email).trim().toLowerCase();
+
+    const safeEmail = escapeSql(emailNorm);
 
     let user = queryOne(`
-      SELECT id, name, email, phone FROM users
-      WHERE LOWER(email) = '${safeEmail}';
-    `);
+          SELECT id, name, email, phone
+          FROM users
+          WHERE LOWER(email) =
+            '${safeEmail}';
+        `);
 
-    // If user does not exist, create them immediately so login by name & email always succeeds!
+    let nameNorm = name ? String(name).trim() : "Student";
+
     if (!user) {
-      const hashed = hashPassword("student123");
+      const password = hashPassword("student123");
+
       db.run(`
-        INSERT INTO users (name, email, password, phone)
-        VALUES ('${safeName}', '${safeEmail}', '${hashed}', '${safePhone}');
-      `);
+          INSERT INTO users
+          (
+            name,
+            email,
+            password,
+            phone
+          )
+          VALUES
+          (
+            '${escapeSql(nameNorm)}',
+            '${safeEmail}',
+            '${password}',
+            '${escapeSql(phone || "")}'
+          );
+        `);
+
       saveDatabase();
-      const newId = getLastInsertId("users");
-      user = queryOne(`SELECT id, name, email, phone FROM users WHERE id = ${newId};`);
-    } else if (name && String(name).trim() && user.name !== nameNorm) {
-      // Update name to reflect user's requested display name
-      db.run(`
-        UPDATE users 
-        SET name = '${safeName}'
-        ${phone ? `, phone = '${safePhone}'` : ""}
-        WHERE id = ${user.id};
-      `);
-      saveDatabase();
-      user = queryOne(`SELECT id, name, email, phone FROM users WHERE id = ${user.id};`);
+
+      const id = getLastInsertId("users");
+
+      user = queryOne(`
+            SELECT id, name, email, phone
+            FROM users
+            WHERE id = ${id};
+          `);
     }
 
-    const userPayload = user || {
-      id: 4,
-      name: nameNorm || "Mounika Dammu",
-      email: emailNorm,
-      phone: safePhone
-    };
-
-    res.json({
-      message: "Login successful",
-      user: userPayload,
-      ...userPayload
+    return res.json({
+      message: "Login successful.",
+      user,
+      ...user,
     });
-  } catch (err: any) {
-    console.error("Login route error handled:", err);
-    const fallbackUser = {
-      id: 4,
-      name: (req.body && req.body.name) ? String(req.body.name).trim() : "Mounika Dammu",
-      email: (req.body && req.body.email) ? String(req.body.email).trim().toLowerCase() : "mounikadammu83@gmail.com",
-      phone: "9346215946"
-    };
-    res.json({
-      message: "Login successful",
-      user: fallbackUser,
-      ...fallbackUser
+  } catch (error: any) {
+    console.error("Login error:", error);
+
+    return res.status(500).json({
+      detail: error?.message || "Login failed.",
     });
   }
 });
 
-// 2.0 Auth: Reset Password
-app.post(["/api/auth/reset-password", "/api/reset-password", "/reset-password"], (req, res) => {
-  try {
-    const { email, password, newPassword } = req.body || {};
-    const pw = newPassword || password;
-    if (!email || !pw) {
-      return res.status(400).json({ detail: "Email and new password are required." });
-    }
-    const emailNorm = String(email).trim().toLowerCase();
-    const safeEmail = emailNorm.replace(/'/g, "''");
-    const cleanPw = String(pw).trim();
+// ====================================================
+// REPORT LOST ITEM
+// ====================================================
 
-    if (cleanPw.length < 6) {
-      return res.status(400).json({ detail: "New password must be at least 6 characters long." });
-    }
-
-    const user = queryOne(`SELECT id, name, email, phone FROM users WHERE LOWER(email) = '${safeEmail}';`);
-    if (!user) {
-      return res.status(404).json({ detail: `No campus account found for ${emailNorm}. Please register first.` });
-    }
-
-    const hashed = hashPassword(cleanPw);
-    db.run(`UPDATE users SET password = '${hashed}' WHERE id = ${user.id};`);
-    saveDatabase();
-
-    const userPayload = {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      phone: user.phone
-    };
-
-    res.json({
-      message: "Password updated successfully! You can now sign in with your new password.",
-      user: userPayload,
-      ...userPayload
-    });
-  } catch (err: any) {
-    res.status(500).json({ detail: err.message || "Failed to reset password" });
-  }
-});
-
-// 2.1 Current User Check
-app.get("/api/auth/me", (req, res) => {
-  try {
-    const userId = Number(req.query.user_id);
-    if (!userId) return res.status(400).json({ detail: "user_id query parameter is required." });
-    const user = queryOne(`SELECT id, name, email, phone FROM users WHERE id = ${userId};`);
-    if (!user) return res.status(404).json({ detail: "User not found." });
-    res.json(user);
-  } catch (err: any) {
-    res.status(500).json({ detail: err.message });
-  }
-});
-
-// 2.1 Get Users List
-app.get("/api/users", (req, res) => {
-  try {
-    const users = queryAll("SELECT id, name, email, phone FROM users ORDER BY id ASC;");
-    res.json(users);
-  } catch (err: any) {
-    res.status(500).json({ detail: err.message });
-  }
-});
-
-// 3. Report Lost Item
 app.post("/api/items/lost", (req, res) => {
   try {
-    const { user_id, category, item_name, description, location, location_lost, date, date_lost, image, contact_info, email, student_name } = req.body || {};
-    const loc = location || location_lost;
-    const dt = date || date_lost;
-    if (!category || !item_name || !description || !loc || !dt) {
-      return res.status(400).json({ detail: "All core fields (category, item name, description, location, date) are required." });
+    console.log("========== LOST ITEM REQUEST ==========");
+
+    console.log("Request body:", req.body);
+
+    const {
+      user_id,
+      category,
+      item_name,
+      description,
+      location,
+      location_lost,
+      date,
+      date_lost,
+      image,
+      contact_info,
+      email,
+      student_name,
+    } = req.body || {};
+
+    const finalLocation = location || location_lost;
+
+    const finalDate = date || date_lost;
+
+    // --------------------------------------------
+    // VALIDATION
+    // --------------------------------------------
+
+    if (
+      !category ||
+      !item_name ||
+      !description ||
+      !finalLocation ||
+      !finalDate
+    ) {
+      console.error("Lost report validation failed.");
+
+      return res.status(400).json({
+        detail:
+          "All core fields are required: category, item name, description, location, and date.",
+      });
     }
 
-    let userId = Number(user_id) || Number(req.query.user_id) || 1;
+    // --------------------------------------------
+    // USER
+    // --------------------------------------------
+
+    let userId = Number(user_id) || 1;
+
     let studentUser: any = null;
 
     if (email && typeof email === "string" && email.trim()) {
       const emailNorm = email.trim().toLowerCase();
-      const existing = queryOne(`SELECT id, name, email, phone FROM users WHERE email = '${emailNorm.replace(/'/g, "''")}';`);
-      if (existing) {
-        userId = existing.id;
-        studentUser = existing;
+
+      const safeEmail = escapeSql(emailNorm);
+
+      studentUser = queryOne(`
+            SELECT id, name, email, phone
+            FROM users
+            WHERE LOWER(email) =
+              '${safeEmail}';
+          `);
+
+      if (studentUser) {
+        userId = Number(studentUser.id);
       } else {
-        const sName = (student_name || "Student").trim();
-        const sPhone = (contact_info || "").trim();
-        const defaultHashed = hashPassword("student123");
+        const studentName = String(student_name || "Student").trim();
+
+        const phone = String(contact_info || "").trim();
+
+        const password = hashPassword("student123");
+
         db.run(`
-          INSERT INTO users (name, email, password, phone)
-          VALUES ('${sName.replace(/'/g, "''")}', '${emailNorm.replace(/'/g, "''")}', '${defaultHashed}', '${sPhone.replace(/'/g, "''")}');
-        `);
+            INSERT INTO users
+            (
+              name,
+              email,
+              password,
+              phone
+            )
+            VALUES
+            (
+              '${escapeSql(studentName)}',
+              '${safeEmail}',
+              '${password}',
+              '${escapeSql(phone)}'
+            );
+          `);
+
         userId = getLastInsertId("users");
-        studentUser = { id: userId, name: sName, email: emailNorm, phone: sPhone };
+
+        studentUser = {
+          id: userId,
+          name: studentName,
+          email: emailNorm,
+          phone,
+        };
       }
     } else {
-      studentUser = queryOne(`SELECT id, name, email, phone FROM users WHERE id = ${userId};`);
+      studentUser = queryOne(`
+            SELECT id, name, email, phone
+            FROM users
+            WHERE id =
+              ${userId};
+          `);
     }
 
-    const safeCat = String(category).replace(/'/g, "''");
-    const safeName = String(item_name).replace(/'/g, "''");
-    const safeDesc = String(description).replace(/'/g, "''");
-    const safeLoc = String(loc).replace(/'/g, "''");
-    const safeDate = String(dt).replace(/'/g, "''");
-    const safeContact = String(contact_info || (studentUser ? studentUser.email : "")).replace(/'/g, "''");
-    const safeImg = String(image || "").replace(/'/g, "''");
+    // --------------------------------------------
+    // SANITIZE VALUES
+    // --------------------------------------------
+
+    const safeCategory = escapeSql(category);
+
+    const safeItemName = escapeSql(item_name);
+
+    const safeDescription = escapeSql(description);
+
+    const safeLocation = escapeSql(finalLocation);
+
+    const safeDate = escapeSql(finalDate);
+
+    const safeImage = escapeSql(image || "");
+
+    const safeContact = escapeSql(contact_info || studentUser?.email || "");
+
+    // --------------------------------------------
+    // INSERT
+    // --------------------------------------------
+
+    console.log("Creating lost item...");
 
     db.run(`
-      INSERT INTO items (user_id, item_type, category, item_name, description, location, date, image, contact_info, status)
-      VALUES (${userId}, 'lost', '${safeCat}', '${safeName}', '${safeDesc}', '${safeLoc}', '${safeDate}', '${safeImg}', '${safeContact}', 'Lost');
-    `);
+        INSERT INTO items
+        (
+          user_id,
+          item_type,
+          category,
+          item_name,
+          description,
+          location,
+          date,
+          image,
+          contact_info,
+          status
+        )
+        VALUES
+        (
+          ${userId},
+          'lost',
+          '${safeCategory}',
+          '${safeItemName}',
+          '${safeDescription}',
+          '${safeLocation}',
+          '${safeDate}',
+          '${safeImage}',
+          '${safeContact}',
+          'Lost'
+        );
+      `);
 
     const newId = getLastInsertId("items");
 
-    // Automatically check for possible matches
+    console.log("Lost item created with ID:", newId);
+
+    // --------------------------------------------
+    // MATCHING
+    // --------------------------------------------
+
     checkMatchesForSingleItem(newId, "lost");
+
+    // --------------------------------------------
+    // SAVE
+    // --------------------------------------------
 
     saveDatabase();
 
-    const item = queryOne(`SELECT * FROM items WHERE id = ${newId};`);
-    res.status(201).json({ ...(item || { id: newId, item_name, status: "Lost" }), user: studentUser });
-  } catch (err: any) {
-    res.status(500).json({ detail: err.message || "Failed to report lost item" });
+    const item = queryOne(`
+          SELECT *
+          FROM items
+          WHERE id =
+            ${newId};
+        `);
+
+    console.log("Lost report completed successfully.");
+
+    return res.status(201).json({
+      message: "Lost item reported successfully.",
+      item,
+      user: studentUser,
+    });
+  } catch (error: any) {
+    console.error("======================================");
+
+    console.error("❌ LOST REPORT ERROR");
+
+    console.error("Message:", error?.message);
+
+    console.error("Stack:", error?.stack);
+
+    console.error("Request body:", req.body);
+
+    console.error("======================================");
+
+    return res.status(500).json({
+      detail: error?.message || "Failed to report lost item.",
+      error: true,
+    });
   }
 });
 
-// 4. Report Found Item
+// ====================================================
+// REPORT FOUND ITEM
+// ====================================================
+
 app.post("/api/items/found", (req, res) => {
   try {
-    const { user_id, category, item_name, description, location, location_found, date, date_found, image, contact_info, email, finder_name } = req.body || {};
-    const loc = location || location_found;
-    const dt = date || date_found;
-    if (!category || !item_name || !description || !loc || !dt) {
-      return res.status(400).json({ detail: "All core fields (category, item name, description, location, date) are required." });
+    const {
+      user_id,
+      category,
+      item_name,
+      description,
+      location,
+      location_found,
+      date,
+      date_found,
+      image,
+      contact_info,
+      email,
+      finder_name,
+    } = req.body || {};
+
+    const finalLocation = location || location_found;
+
+    const finalDate = date || date_found;
+
+    if (
+      !category ||
+      !item_name ||
+      !description ||
+      !finalLocation ||
+      !finalDate
+    ) {
+      return res.status(400).json({
+        detail:
+          "All core fields are required: category, item name, description, location, and date.",
+      });
     }
 
-    let userId = Number(user_id) || Number(req.query.user_id) || 1;
+    let userId = Number(user_id) || 1;
+
     let finderUser: any = null;
 
     if (email && typeof email === "string" && email.trim()) {
       const emailNorm = email.trim().toLowerCase();
-      const existing = queryOne(`SELECT id, name, email, phone FROM users WHERE email = '${emailNorm.replace(/'/g, "''")}';`);
-      if (existing) {
-        userId = existing.id;
-        finderUser = existing;
+
+      const safeEmail = escapeSql(emailNorm);
+
+      finderUser = queryOne(`
+            SELECT id, name, email, phone
+            FROM users
+            WHERE LOWER(email) =
+              '${safeEmail}';
+          `);
+
+      if (finderUser) {
+        userId = Number(finderUser.id);
       } else {
-        const fName = (finder_name || "Student").trim();
-        const fPhone = (contact_info || "").trim();
-        const defaultHashed = hashPassword("student123");
+        const finderName = String(finder_name || "Student").trim();
+
+        const phone = String(contact_info || "").trim();
+
+        const password = hashPassword("student123");
+
         db.run(`
-          INSERT INTO users (name, email, password, phone)
-          VALUES ('${fName.replace(/'/g, "''")}', '${emailNorm.replace(/'/g, "''")}', '${defaultHashed}', '${fPhone.replace(/'/g, "''")}');
-        `);
+            INSERT INTO users
+            (
+              name,
+              email,
+              password,
+              phone
+            )
+            VALUES
+            (
+              '${escapeSql(finderName)}',
+              '${safeEmail}',
+              '${password}',
+              '${escapeSql(phone)}'
+            );
+          `);
+
         userId = getLastInsertId("users");
-        finderUser = { id: userId, name: fName, email: emailNorm, phone: fPhone };
+
+        finderUser = {
+          id: userId,
+          name: finderName,
+          email: emailNorm,
+          phone,
+        };
       }
     } else {
-      finderUser = queryOne(`SELECT id, name, email, phone FROM users WHERE id = ${userId};`);
+      finderUser = queryOne(`
+            SELECT id, name, email, phone
+            FROM users
+            WHERE id =
+              ${userId};
+          `);
     }
 
-    const safeCat = String(category).replace(/'/g, "''");
-    const safeName = String(item_name).replace(/'/g, "''");
-    const safeDesc = String(description).replace(/'/g, "''");
-    const safeLoc = String(loc).replace(/'/g, "''");
-    const safeDate = String(dt).replace(/'/g, "''");
-    const safeContact = String(contact_info || (finderUser ? finderUser.email : "")).replace(/'/g, "''");
-    const safeImg = String(image || "").replace(/'/g, "''");
+    const safeCategory = escapeSql(category);
+
+    const safeItemName = escapeSql(item_name);
+
+    const safeDescription = escapeSql(description);
+
+    const safeLocation = escapeSql(finalLocation);
+
+    const safeDate = escapeSql(finalDate);
+
+    const safeImage = escapeSql(image || "");
+
+    const safeContact = escapeSql(contact_info || finderUser?.email || "");
 
     db.run(`
-      INSERT INTO items (user_id, item_type, category, item_name, description, location, date, image, contact_info, status)
-      VALUES (${userId}, 'found', '${safeCat}', '${safeName}', '${safeDesc}', '${safeLoc}', '${safeDate}', '${safeImg}', '${safeContact}', 'Found');
-    `);
+        INSERT INTO items
+        (
+          user_id,
+          item_type,
+          category,
+          item_name,
+          description,
+          location,
+          date,
+          image,
+          contact_info,
+          status
+        )
+        VALUES
+        (
+          ${userId},
+          'found',
+          '${safeCategory}',
+          '${safeItemName}',
+          '${safeDescription}',
+          '${safeLocation}',
+          '${safeDate}',
+          '${safeImage}',
+          '${safeContact}',
+          'Found'
+        );
+      `);
 
     const newId = getLastInsertId("items");
 
-    // Automatically check for possible matches
     checkMatchesForSingleItem(newId, "found");
 
     saveDatabase();
 
-    const item = queryOne(`SELECT * FROM items WHERE id = ${newId};`);
-    res.status(201).json({ ...(item || { id: newId, item_name, status: "Found" }), user: finderUser });
-  } catch (err: any) {
-    res.status(500).json({ detail: err.message || "Failed to report found item" });
+    const item = queryOne(`
+          SELECT *
+          FROM items
+          WHERE id =
+            ${newId};
+        `);
+
+    return res.status(201).json({
+      message: "Found item reported successfully.",
+      item,
+      user: finderUser,
+    });
+  } catch (error: any) {
+    console.error("❌ FOUND REPORT ERROR:", error);
+
+    return res.status(500).json({
+      detail: error?.message || "Failed to report found item.",
+      error: true,
+    });
   }
 });
 
-// 5. Get All Items
+// ====================================================
+// GET ALL ITEMS
+// ====================================================
+
 app.get("/api/items", (req, res) => {
   try {
     const { item_type, category } = req.query;
+
     let sql = "SELECT * FROM items WHERE 1=1";
+
     if (item_type && item_type !== "all") {
-      sql += ` AND item_type = '${String(item_type).replace(/'/g, "''")}'`;
+      sql += `
+          AND item_type =
+          '${escapeSql(item_type)}'
+        `;
     }
+
     if (category && category !== "All") {
-      sql += ` AND category = '${String(category).replace(/'/g, "''")}'`;
+      sql += `
+          AND category =
+          '${escapeSql(category)}'
+        `;
     }
+
     const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 50));
-    sql += ` ORDER BY id DESC LIMIT ${limit};`;
+
+    sql += `
+        ORDER BY id DESC
+        LIMIT ${limit};
+      `;
 
     const items = queryAll(sql);
-    res.json(items);
-  } catch (err: any) {
-    res.status(500).json({ detail: err.message });
+
+    return res.json(items);
+  } catch (error: any) {
+    return res.status(500).json({
+      detail: error?.message || "Failed to load items.",
+    });
   }
 });
 
-// 6. Search Items
+// ====================================================
+// SEARCH
+// ====================================================
+
 app.get("/api/items/search", (req, res) => {
   try {
-    const queryText = (req.query.q || req.query.name || req.query.keyword || req.query.search || "").toString().trim();
+    const queryText = (
+      req.query.q ||
+      req.query.name ||
+      req.query.keyword ||
+      req.query.search ||
+      ""
+    )
+      .toString()
+      .trim();
+
     const { category, location, date, status, item_type } = req.query;
+
     let sql = "SELECT * FROM items WHERE 1=1";
 
     if (category && category !== "All") {
-      sql += ` AND category = '${String(category).replace(/'/g, "''")}'`;
+      sql += `
+          AND category =
+          '${escapeSql(category)}'
+        `;
     }
+
     if (location) {
-      const l = String(location).toLowerCase().replace(/'/g, "''");
-      sql += ` AND LOWER(location) LIKE '%${l}%'`;
+      sql += `
+          AND LOWER(location)
+          LIKE '%${escapeSql(String(location).toLowerCase())}%'
+        `;
     }
+
     if (date) {
-      sql += ` AND date = '${String(date).replace(/'/g, "''")}'`;
+      sql += `
+          AND date =
+          '${escapeSql(date)}'
+        `;
     }
+
     if (status && status !== "All") {
-      sql += ` AND status = '${String(status).replace(/'/g, "''")}'`;
+      sql += `
+          AND status =
+          '${escapeSql(status)}'
+        `;
     }
+
     if (item_type && item_type !== "all") {
-      sql += ` AND item_type = '${String(item_type).replace(/'/g, "''")}'`;
+      sql += `
+          AND item_type =
+          '${escapeSql(item_type)}'
+        `;
     }
 
     sql += " ORDER BY id DESC;";
+
     const items = queryAll(sql);
 
     if (!queryText) {
       return res.json(items);
     }
 
-    const lowerQuery = queryText.toLowerCase();
-    const words = lowerQuery.split(/\s+/).filter(Boolean);
-    if (words.length === 0) {
-      return res.json(items);
-    }
+    const words = queryText.toLowerCase().split(/\s+/).filter(Boolean);
 
     const scored = items.map((item: any) => {
-      const name = (item.item_name || "").toLowerCase();
-      const desc = (item.description || "").toLowerCase();
-      const cat = (item.category || "").toLowerCase();
-      const loc = (item.location || "").toLowerCase();
-      const contact = (item.contact_info || "").toLowerCase();
+      const name = String(item.item_name || "").toLowerCase();
+
+      const description = String(item.description || "").toLowerCase();
+
+      const itemCategory = String(item.category || "").toLowerCase();
+
+      const itemLocation = String(item.location || "").toLowerCase();
 
       let score = 0;
-      // Exact phrase matches
-      if (name === lowerQuery) score += 30;
-      else if (name.includes(lowerQuery)) score += 20;
-      else if (desc.includes(lowerQuery)) score += 12;
-      else if (loc.includes(lowerQuery)) score += 8;
-
       let matchedWords = 0;
-      for (const w of words) {
-        let wMatch = false;
-        if (name.includes(w)) { score += 6; wMatch = true; }
-        if (cat.includes(w)) { score += 5; wMatch = true; }
-        if (desc.includes(w)) { score += 4; wMatch = true; }
-        if (loc.includes(w)) { score += 3; wMatch = true; }
-        if (contact.includes(w)) { score += 2; wMatch = true; }
-        if (wMatch) matchedWords++;
+
+      if (name === queryText.toLowerCase()) {
+        score += 30;
+      } else if (name.includes(queryText.toLowerCase())) {
+        score += 20;
       }
 
-      const allWordsMatch = matchedWords === words.length;
-      return { item, score, allWordsMatch, matchedWords };
-    });
+      for (const word of words) {
+        let matched = false;
 
-    // First try all words match
-    const fullMatches = scored.filter(s => s.allWordsMatch && s.score > 0);
-    if (fullMatches.length > 0) {
-      return res.json(fullMatches.sort((a, b) => b.score - a.score).map(s => s.item));
-    }
+        if (name.includes(word)) {
+          score += 6;
+          matched = true;
+        }
 
-    // Fallback to highest partial matches
-    const partialMatches = scored.filter(s => s.score > 0);
-    return res.json(partialMatches.sort((a, b) => b.score - a.score).map(s => s.item));
-  } catch (err: any) {
-    res.status(500).json({ detail: err.message });
-  }
-});
+        if (itemCategory.includes(word)) {
+          score += 5;
+          matched = true;
+        }
 
-// 7. Get Item By ID
-app.get("/api/items/:id", (req, res) => {
-  try {
-    const id = Number(req.params.id);
-    const item = queryOne(`SELECT * FROM items WHERE id = ${id};`);
-    if (!item) {
-      return res.status(404).json({ detail: "Item not found." });
-    }
-    res.json(item);
-  } catch (err: any) {
-    res.status(500).json({ detail: err.message });
-  }
-});
+        if (description.includes(word)) {
+          score += 4;
+          matched = true;
+        }
 
-// 8. Get All Matches or Matches for an Item
-app.get("/api/matches", (req, res) => {
-  try {
-    const { status } = req.query;
-    let sql = "SELECT * FROM matches WHERE 1=1";
-    if (status && status !== "All") {
-      sql += ` AND status = '${String(status).replace(/'/g, "''")}'`;
-    }
-    sql += " ORDER BY match_score DESC, id DESC;";
+        if (itemLocation.includes(word)) {
+          score += 3;
+          matched = true;
+        }
 
-    const matches = queryAll(sql);
-
-    // Populate item details
-    const enriched = matches.map(m => {
-      const lostItem = queryOne(`SELECT * FROM items WHERE id = ${m.lost_item_id};`);
-      const foundItem = queryOne(`SELECT * FROM items WHERE id = ${m.found_item_id};`);
-
-      let breakdown = null;
-      try {
-        breakdown = m.score_breakdown ? JSON.parse(String(m.score_breakdown)) : null;
-      } catch {}
+        if (matched) {
+          matchedWords++;
+        }
+      }
 
       return {
-        ...m,
-        lost_item: lostItem,
-        found_item: foundItem,
-        breakdown
+        item,
+        score,
+        allWordsMatch: matchedWords === words.length,
       };
     });
 
-    res.json(enriched);
-  } catch (err: any) {
-    res.status(500).json({ detail: err.message });
+    const fullMatches = scored.filter(
+      (item) => item.allWordsMatch && item.score > 0,
+    );
+
+    if (fullMatches.length > 0) {
+      return res.json(
+        fullMatches.sort((a, b) => b.score - a.score).map((item) => item.item),
+      );
+    }
+
+    return res.json(
+      scored
+        .filter((item) => item.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .map((item) => item.item),
+    );
+  } catch (error: any) {
+    return res.status(500).json({
+      detail: error?.message || "Search failed.",
+    });
+  }
+});
+
+// ====================================================
+// GET ITEM BY ID
+// ====================================================
+
+app.get("/api/items/:id", (req, res) => {
+  try {
+    const id = Number(req.params.id);
+
+    if (!Number.isInteger(id)) {
+      return res.status(400).json({
+        detail: "Invalid item ID.",
+      });
+    }
+
+    const item = queryOne(`
+          SELECT *
+          FROM items
+          WHERE id = ${id};
+        `);
+
+    if (!item) {
+      return res.status(404).json({
+        detail: "Item not found.",
+      });
+    }
+
+    return res.json(item);
+  } catch (error: any) {
+    return res.status(500).json({
+      detail: error?.message || "Failed to load item.",
+    });
+  }
+});
+
+// ====================================================
+// MATCHES
+// ====================================================
+
+app.get("/api/matches", (req, res) => {
+  try {
+    const { status } = req.query;
+
+    let sql = "SELECT * FROM matches WHERE 1=1";
+
+    if (status && status !== "All") {
+      sql += `
+          AND status =
+          '${escapeSql(status)}'
+        `;
+    }
+
+    sql += `
+        ORDER BY
+        match_score DESC,
+        id DESC;
+      `;
+
+    const matches = queryAll(sql);
+
+    const enriched = matches.map((match: any) => {
+      const lostItem = queryOne(`
+                SELECT *
+                FROM items
+                WHERE id =
+                  ${Number(match.lost_item_id)};
+              `);
+
+      const foundItem = queryOne(`
+                SELECT *
+                FROM items
+                WHERE id =
+                  ${Number(match.found_item_id)};
+              `);
+
+      let breakdown = null;
+
+      try {
+        if (match.score_breakdown) {
+          breakdown = JSON.parse(String(match.score_breakdown));
+        }
+      } catch {
+        breakdown = null;
+      }
+
+      return {
+        ...match,
+        lost_item: lostItem,
+        found_item: foundItem,
+        breakdown,
+      };
+    });
+
+    return res.json(enriched);
+  } catch (error: any) {
+    return res.status(500).json({
+      detail: error?.message || "Failed to load matches.",
+    });
   }
 });
 
 app.get("/api/matches/:item_id", (req, res) => {
   try {
     const itemId = Number(req.params.item_id);
-    const sql = `SELECT * FROM matches WHERE lost_item_id = ${itemId} OR found_item_id = ${itemId} ORDER BY match_score DESC;`;
-    const matches = queryAll(sql);
 
-    const enriched = matches.map(m => {
-      const lostItem = queryOne(`SELECT * FROM items WHERE id = ${m.lost_item_id};`);
-      const foundItem = queryOne(`SELECT * FROM items WHERE id = ${m.found_item_id};`);
+    const matches = queryAll(`
+          SELECT *
+          FROM matches
+          WHERE
+            lost_item_id =
+              ${itemId}
+            OR
+            found_item_id =
+              ${itemId}
+          ORDER BY
+            match_score DESC;
+        `);
+
+    const enriched = matches.map((match: any) => {
+      const lostItem = queryOne(`
+                SELECT *
+                FROM items
+                WHERE id =
+                  ${Number(match.lost_item_id)};
+              `);
+
+      const foundItem = queryOne(`
+                SELECT *
+                FROM items
+                WHERE id =
+                  ${Number(match.found_item_id)};
+              `);
 
       let breakdown = null;
+
       try {
-        breakdown = m.score_breakdown ? JSON.parse(String(m.score_breakdown)) : null;
-      } catch {}
+        breakdown = match.score_breakdown
+          ? JSON.parse(String(match.score_breakdown))
+          : null;
+      } catch {
+        breakdown = null;
+      }
 
       return {
-        ...m,
+        ...match,
         lost_item: lostItem,
         found_item: foundItem,
-        breakdown
+        breakdown,
       };
     });
 
-    res.json(enriched);
-  } catch (err: any) {
-    res.status(500).json({ detail: err.message });
+    return res.json(enriched);
+  } catch (error: any) {
+    return res.status(500).json({
+      detail: error?.message || "Failed to load matches.",
+    });
   }
 });
 
-// 9. Confirm Match
+// ====================================================
+// CONFIRM MATCH
+// ====================================================
+
 app.post("/api/matches/:match_id/confirm", (req, res) => {
   try {
     const matchId = Number(req.params.match_id);
-    const matchRecord = queryOne(`SELECT * FROM matches WHERE id = ${matchId};`);
-    if (!matchRecord) {
-      return res.status(404).json({ detail: "Match not found." });
+
+    const match = queryOne(`
+          SELECT *
+          FROM matches
+          WHERE id =
+            ${matchId};
+        `);
+
+    if (!match) {
+      return res.status(404).json({
+        detail: "Match not found.",
+      });
     }
 
-    db.run(`UPDATE matches SET status = 'Confirmed' WHERE id = ${matchId};`);
-    db.run(`UPDATE items SET status = 'Match Verified' WHERE id IN (${matchRecord.lost_item_id}, ${matchRecord.found_item_id});`);
+    db.run(`
+        UPDATE matches
+        SET status = 'Confirmed'
+        WHERE id =
+          ${matchId};
+      `);
+
+    db.run(`
+        UPDATE items
+        SET status =
+          'Match Verified'
+        WHERE id IN
+        (
+          ${Number(match.lost_item_id)},
+          ${Number(match.found_item_id)}
+        );
+      `);
+
     saveDatabase();
 
-    const lostItem = queryOne(`SELECT * FROM items WHERE id = ${matchRecord.lost_item_id};`);
-    const foundItem = queryOne(`SELECT * FROM items WHERE id = ${matchRecord.found_item_id};`);
-
-    res.json({
-      message: "Match successfully confirmed! Status updated to 'Match Verified'.",
+    return res.json({
+      message: "Match successfully confirmed.",
       match_id: matchId,
       status: "Confirmed",
-      lost_item: lostItem,
-      found_item: foundItem
     });
-  } catch (err: any) {
-    res.status(500).json({ detail: err.message });
+  } catch (error: any) {
+    return res.status(500).json({
+      detail: error?.message || "Failed to confirm match.",
+    });
   }
 });
 
-// 9b. Confirm Match by Item ID
+// ====================================================
+// CONFIRM MATCH BY ITEM
+// ====================================================
+
 app.post("/api/items/:item_id/confirm-match", (req, res) => {
   try {
     const itemId = Number(req.params.item_id);
-    const matchRecord = queryOne(`
-      SELECT * FROM matches 
-      WHERE (lost_item_id = ${itemId} OR found_item_id = ${itemId}) 
-      ORDER BY CASE WHEN status = 'Suggested' THEN 0 ELSE 1 END, match_score DESC 
-      LIMIT 1;
-    `);
-    if (!matchRecord) {
-      return res.status(404).json({ detail: "No match record found for this item." });
+
+    const match = queryOne(`
+          SELECT *
+          FROM matches
+          WHERE
+            lost_item_id =
+              ${itemId}
+            OR
+            found_item_id =
+              ${itemId}
+          ORDER BY
+            CASE
+              WHEN status =
+                'Suggested'
+              THEN 0
+              ELSE 1
+            END,
+            match_score DESC
+          LIMIT 1;
+        `);
+
+    if (!match) {
+      return res.status(404).json({
+        detail: "No match found for this item.",
+      });
     }
 
-    db.run(`UPDATE matches SET status = 'Confirmed' WHERE id = ${matchRecord.id};`);
-    db.run(`UPDATE items SET status = 'Match Verified' WHERE id IN (${matchRecord.lost_item_id}, ${matchRecord.found_item_id});`);
+    db.run(`
+        UPDATE matches
+        SET status = 'Confirmed'
+        WHERE id =
+          ${Number(match.id)};
+      `);
+
+    db.run(`
+        UPDATE items
+        SET status =
+          'Match Verified'
+        WHERE id IN
+        (
+          ${Number(match.lost_item_id)},
+          ${Number(match.found_item_id)}
+        );
+      `);
+
     saveDatabase();
 
-    const lostItem = queryOne(`SELECT * FROM items WHERE id = ${matchRecord.lost_item_id};`);
-    const foundItem = queryOne(`SELECT * FROM items WHERE id = ${matchRecord.found_item_id};`);
-
-    res.json({
-      message: "Match successfully confirmed! Status updated to 'Match Verified'.",
-      match_id: matchRecord.id,
+    return res.json({
+      message: "Match successfully confirmed.",
+      match_id: match.id,
       status: "Confirmed",
-      lost_item: lostItem,
-      found_item: foundItem
     });
-  } catch (err: any) {
-    res.status(500).json({ detail: err.message });
+  } catch (error: any) {
+    return res.status(500).json({
+      detail: error?.message || "Failed to confirm match.",
+    });
   }
 });
 
-// 10. Reject Match
+// ====================================================
+// REJECT MATCH
+// ====================================================
+
 app.post("/api/matches/:match_id/reject", (req, res) => {
   try {
     const matchId = Number(req.params.match_id);
-    const matchRecord = queryOne(`SELECT * FROM matches WHERE id = ${matchId};`);
-    if (!matchRecord) {
-      return res.status(404).json({ detail: "Match not found." });
+
+    const match = queryOne(`
+          SELECT *
+          FROM matches
+          WHERE id =
+            ${matchId};
+        `);
+
+    if (!match) {
+      return res.status(404).json({
+        detail: "Match not found.",
+      });
     }
 
-    db.run(`UPDATE matches SET status = 'Rejected' WHERE id = ${matchId};`);
+    db.run(`
+        UPDATE matches
+        SET status =
+          'Rejected'
+        WHERE id =
+          ${matchId};
+      `);
 
-    // Check if items have other pending matches before reverting to Lost / Found
     const otherLost = queryOne(`
-      SELECT id FROM matches 
-      WHERE lost_item_id = ${matchRecord.lost_item_id} AND id != ${matchId} AND status IN ('Suggested', 'Confirmed');
-    `);
+          SELECT id
+          FROM matches
+          WHERE
+            lost_item_id =
+              ${Number(match.lost_item_id)}
+          AND id !=
+              ${matchId}
+          AND status IN
+              ('Suggested', 'Confirmed');
+        `);
+
     if (!otherLost) {
-      db.run(`UPDATE items SET status = 'Lost' WHERE id = ${matchRecord.lost_item_id} AND status = 'Possible Match';`);
+      db.run(`
+          UPDATE items
+          SET status =
+            'Lost'
+          WHERE id =
+            ${Number(match.lost_item_id)}
+          AND status =
+            'Possible Match';
+        `);
     }
 
     const otherFound = queryOne(`
-      SELECT id FROM matches 
-      WHERE found_item_id = ${matchRecord.found_item_id} AND id != ${matchId} AND status IN ('Suggested', 'Confirmed');
-    `);
+          SELECT id
+          FROM matches
+          WHERE
+            found_item_id =
+              ${Number(match.found_item_id)}
+          AND id !=
+              ${matchId}
+          AND status IN
+              ('Suggested', 'Confirmed');
+        `);
+
     if (!otherFound) {
-      db.run(`UPDATE items SET status = 'Found' WHERE id = ${matchRecord.found_item_id} AND status = 'Possible Match';`);
+      db.run(`
+          UPDATE items
+          SET status =
+            'Found'
+          WHERE id =
+            ${Number(match.found_item_id)}
+          AND status =
+            'Possible Match';
+        `);
     }
 
     saveDatabase();
-    res.json({
-      message: "Match marked as Not a Match.",
+
+    return res.json({
+      message: "Match marked as not a match.",
       match_id: matchId,
-      status: "Rejected"
+      status: "Rejected",
     });
-  } catch (err: any) {
-    res.status(500).json({ detail: err.message });
+  } catch (error: any) {
+    return res.status(500).json({
+      detail: error?.message || "Failed to reject match.",
+    });
   }
 });
 
-// 11. Mark Item Resolved or Closed
+// ====================================================
+// RESOLVE ITEM
+// ====================================================
+
 app.post("/api/items/:id/resolve", (req, res) => {
   try {
     const id = Number(req.params.id);
-    const targetStatus = req.body.status || "Resolved";
-    db.run(`UPDATE items SET status = '${targetStatus.replace(/'/g, "''")}' WHERE id = ${id};`);
+
+    const requestedStatus = req.body?.status || "Resolved";
+
+    const status = String(requestedStatus).trim();
+
+    db.run(`
+        UPDATE items
+        SET status =
+          '${escapeSql(status)}'
+        WHERE id =
+          ${id};
+      `);
+
     saveDatabase();
-    res.json({ message: `Item marked as ${targetStatus}`, item_id: id, status: targetStatus });
-  } catch (err: any) {
-    res.status(500).json({ detail: err.message });
+
+    return res.json({
+      message: `Item marked as ${status}.`,
+      item_id: id,
+      status,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      detail: error?.message || "Failed to resolve item.",
+    });
   }
 });
 
-// 12. My Reports
+// ====================================================
+// MY REPORTS
+// ====================================================
+
 app.get("/api/my-reports", (req, res) => {
   try {
     const userIdParam = req.query.user_id;
-    const emailParam = req.query.email ? String(req.query.email).trim().toLowerCase() : null;
+
+    const emailParam = req.query.email
+      ? String(req.query.email).trim().toLowerCase()
+      : null;
 
     if (userIdParam === "all") {
-      const items = queryAll("SELECT * FROM items ORDER BY id DESC;");
-      return res.json(items);
+      return res.json(
+        queryAll(`
+            SELECT *
+            FROM items
+            ORDER BY id DESC;
+          `),
+      );
     }
 
     if (emailParam) {
-      const safeEmail = emailParam.replace(/'/g, "''");
-      const user = queryOne(`SELECT id FROM users WHERE email = '${safeEmail}';`);
-      const userClause = user ? `user_id = ${user.id} OR ` : "";
-      const items = queryAll(`SELECT * FROM items WHERE ${userClause} contact_info LIKE '%${safeEmail}%' ORDER BY id DESC;`);
-      return res.json(items);
+      const email = escapeSql(emailParam);
+
+      const user = queryOne(`
+            SELECT id
+            FROM users
+            WHERE LOWER(email) =
+              '${email}';
+          `);
+
+      if (user) {
+        return res.json(
+          queryAll(`
+              SELECT *
+              FROM items
+              WHERE user_id =
+                ${Number(user.id)}
+              ORDER BY id DESC;
+            `),
+        );
+      }
+
+      return res.json([]);
     }
 
     const userId = Number(userIdParam) || 1;
-    const items = queryAll(`SELECT * FROM items WHERE user_id = ${userId} ORDER BY id DESC;`);
-    res.json(items);
-  } catch (err: any) {
-    res.status(500).json({ detail: err.message });
+
+    return res.json(
+      queryAll(`
+          SELECT *
+          FROM items
+          WHERE user_id =
+            ${userId}
+          ORDER BY id DESC;
+        `),
+    );
+  } catch (error: any) {
+    return res.status(500).json({
+      detail: error?.message || "Failed to load reports.",
+    });
   }
 });
 
-// 13. Dashboard Stats
+// ====================================================
+// DASHBOARD STATS
+// ====================================================
+
 app.get("/api/stats", (req, res) => {
   try {
     const userId = req.query.user_id ? Number(req.query.user_id) : null;
@@ -1154,101 +2213,232 @@ app.get("/api/stats", (req, res) => {
     let resolvedCount = 0;
 
     if (userId) {
-      lostCount = queryVal(`SELECT COUNT(*) FROM items WHERE user_id = ${userId} AND item_type = 'lost';`);
-      foundCount = queryVal(`SELECT COUNT(*) FROM items WHERE user_id = ${userId} AND item_type = 'found';`);
+      lostCount = queryVal(`
+            SELECT COUNT(*)
+            FROM items
+            WHERE user_id =
+              ${userId}
+            AND item_type =
+              'lost';
+          `);
 
-      const userItems = queryAll(`SELECT id FROM items WHERE user_id = ${userId};`);
-      if (userItems.length > 0) {
-        const ids = userItems.map(v => v.id).join(",");
-        matchCount = queryVal(`SELECT COUNT(*) FROM matches WHERE (lost_item_id IN (${ids}) OR found_item_id IN (${ids})) AND status = 'Suggested';`);
+      foundCount = queryVal(`
+            SELECT COUNT(*)
+            FROM items
+            WHERE user_id =
+              ${userId}
+            AND item_type =
+              'found';
+          `);
+
+      const userItems = queryAll(`
+            SELECT id
+            FROM items
+            WHERE user_id =
+              ${userId};
+          `);
+
+      if (userItems.length) {
+        const ids = userItems.map((item) => Number(item.id)).join(",");
+
+        matchCount = queryVal(`
+              SELECT COUNT(*)
+              FROM matches
+              WHERE
+                (
+                  lost_item_id
+                  IN (${ids})
+                  OR
+                  found_item_id
+                  IN (${ids})
+                )
+              AND status =
+                'Suggested';
+            `);
       }
 
-      resolvedCount = queryVal(`SELECT COUNT(*) FROM items WHERE user_id = ${userId} AND status IN ('Resolved', 'Match Verified');`);
+      resolvedCount = queryVal(`
+            SELECT COUNT(*)
+            FROM items
+            WHERE user_id =
+              ${userId}
+            AND status IN
+              (
+                'Resolved',
+                'Match Verified'
+              );
+          `);
     } else {
-      lostCount = queryVal("SELECT COUNT(*) FROM items WHERE item_type = 'lost';");
-      foundCount = queryVal("SELECT COUNT(*) FROM items WHERE item_type = 'found';");
-      matchCount = queryVal("SELECT COUNT(*) FROM matches WHERE status = 'Suggested';");
-      resolvedCount = queryVal("SELECT COUNT(*) FROM items WHERE status IN ('Resolved', 'Match Verified');");
+      lostCount = queryVal(`
+            SELECT COUNT(*)
+            FROM items
+            WHERE item_type =
+              'lost';
+          `);
+
+      foundCount = queryVal(`
+            SELECT COUNT(*)
+            FROM items
+            WHERE item_type =
+              'found';
+          `);
+
+      matchCount = queryVal(`
+            SELECT COUNT(*)
+            FROM matches
+            WHERE status =
+              'Suggested';
+          `);
+
+      resolvedCount = queryVal(`
+            SELECT COUNT(*)
+            FROM items
+            WHERE status IN
+              (
+                'Resolved',
+                'Match Verified'
+              );
+          `);
     }
 
-    const totalActive = queryVal("SELECT COUNT(*) FROM items WHERE status IN ('Lost', 'Found', 'Possible Match');");
+    const totalActive = queryVal(`
+          SELECT COUNT(*)
+          FROM items
+          WHERE status IN
+          (
+            'Lost',
+            'Found',
+            'Possible Match'
+          );
+        `);
 
-    res.json({
+    return res.json({
       my_lost_reports: lostCount,
       my_found_reports: foundCount,
       possible_matches: matchCount,
       resolved_cases: resolvedCount,
-      total_active_items: totalActive
+      total_active_items: totalActive,
     });
-  } catch (err: any) {
-    res.status(500).json({ detail: err.message });
+  } catch (error: any) {
+    return res.status(500).json({
+      detail: error?.message || "Failed to load dashboard statistics.",
+    });
   }
 });
 
-// Live Matching Calculator API endpoint (for student interview demonstration)
+// ====================================================
+// MATCH CALCULATOR
+// ====================================================
+
 app.post("/api/match-calculator", (req, res) => {
   try {
-    const { lost_item, found_item } = req.body;
+    const { lost_item, found_item } = req.body || {};
+
     if (!lost_item || !found_item) {
-      return res.status(400).json({ detail: "Both lost_item and found_item objects are required." });
+      return res.status(400).json({
+        detail: "Both lost_item and found_item are required.",
+      });
     }
+
     const result = calculateMatchScore(lost_item, found_item);
-    res.json(result);
-  } catch (err: any) {
-    res.status(500).json({ detail: err.message });
+
+    return res.json(result);
+  } catch (error: any) {
+    return res.status(500).json({
+      detail: error?.message || "Match calculation failed.",
+    });
   }
 });
 
-// Any unhandled API request returns JSON detail rather than HTML 404
+// ====================================================
+// UNKNOWN API ROUTES
+// ====================================================
+
 app.all(["/api/*", "/api"], (req, res) => {
-  res.status(404).json({ detail: `API endpoint not found: ${req.method} ${req.path}` });
+  return res.status(404).json({
+    detail: `API endpoint not found: ${req.method} ${req.path}`,
+  });
 });
 
-// Serve frontend static files
+// ====================================================
+// FRONTEND
+// ====================================================
+
 const frontendDir = fs.existsSync(path.join(process.cwd(), "frontend"))
   ? path.join(process.cwd(), "frontend")
   : path.join(appDir, "frontend");
+
 app.use(express.static(frontendDir));
 
-// Fallback to frontend/index.html for any direct web page requests
 app.get("*", (req, res) => {
   if (req.path.startsWith("/api/")) {
-    return res.status(404).json({ detail: `API endpoint not found: ${req.method} ${req.path}` });
+    return res.status(404).json({
+      detail: "API endpoint not found.",
+    });
   }
+
   const possibleFile = path.join(frontendDir, req.path);
+
   if (fs.existsSync(possibleFile) && fs.statSync(possibleFile).isFile()) {
     return res.sendFile(possibleFile);
   }
+
   const possibleHtml = path.join(frontendDir, `${req.path}.html`);
+
   if (fs.existsSync(possibleHtml) && fs.statSync(possibleHtml).isFile()) {
     return res.sendFile(possibleHtml);
   }
-  res.sendFile(path.join(frontendDir, "index.html"));
+
+  return res.sendFile(path.join(frontendDir, "index.html"));
 });
 
-// Express global error handling middleware - prevents raw HTML 500 errors
-app.use((err: any, req: any, res: any, next: any) => {
-  console.error("Global express error caught:", err);
+// ====================================================
+// GLOBAL ERROR HANDLER
+// ====================================================
+
+app.use((error: any, req: any, res: any, next: any) => {
+  console.error("Global Express error:", error);
+
   if (res.headersSent) {
-    return next(err);
+    return next(error);
   }
-  const statusCode = Number(err.status || err.statusCode) || 500;
-  res.status(statusCode).json({
-    detail: err.message || "An internal error occurred. Please try again.",
-    error: true
+
+  return res.status(Number(error?.status || error?.statusCode) || 500).json({
+    detail: error?.message || "Internal server error.",
+    error: true,
   });
 });
+
+// ====================================================
+// EXPORTS
+// ====================================================
 
 export { app, initDatabase };
 
-async function start() {
-  await initDatabase();
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Smart Student Lost & Found Server running on http://0.0.0.0:${PORT}`);
-  });
+// ====================================================
+// START SERVER
+// ====================================================
+
+async function start(): Promise<void> {
+  try {
+    await initDatabase();
+
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(
+        `Smart Student Lost & Found Server running on http://0.0.0.0:${PORT}`,
+      );
+    });
+  } catch (error) {
+    console.error("❌ Failed to start server:", error);
+
+    process.exit(1);
+  }
 }
 
-// Automatically start standalone dev/prod server when not in a serverless environment (like Vercel)
+// ====================================================
+// START ONLY OUTSIDE VERCEL
+// ====================================================
+
 if (!process.env.VERCEL) {
   start();
 }
