@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Possible Matches - Smart Student Lost &amp; Found</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="navbar"></header>
+
+  <main class="main-content">
+    <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <h1 class="page-title">Smart Possible Matches</h1>
+        <p class="page-subtitle">Automatic pairings calculated between campus lost reports and found reports with explainable score percentages.</p>
+      </div>
+      <div style="display: flex; gap: 0.5rem; align-items: center;">
+        <label for="filter-match-status" style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">Status:</label>
+        <select id="filter-match-status" class="form-control" style="width: auto; padding: 0.4rem 0.8rem;" onchange="loadMatches()">
+          <option value="All">All Matches</option>
+          <option value="Suggested" selected>Pending Review (Suggested)</option>
+          <option value="Confirmed">Confirmed / Verified</option>
+          <option value="Rejected">Rejected (Not a Match)</option>
+        </select>
+        <a href="interview-guide.html" class="btn btn-secondary btn-sm" title="View algorithm formula details">
+          Formula Details ℹ️
+        </a>
+      </div>
+    </div>
+
+    <!-- Live Matches Container -->
+    <div id="matches-list">
+      <div style="text-align: center; padding: 3rem; color: var(--text-muted);">
+        Analyzing matches in SQLite database...
+      </div>
+    </div>
+  </main>
+
+  <script src="js/app.js"></script>
+  <script>
+    renderHeader('matches');
+    renderFooter();
+
+    async function loadMatches(highlightId = null) {
+      const container = document.getElementById("matches-list");
+      const statusFilter = document.getElementById("filter-match-status").value;
+
+      container.innerHTML = `<div style="text-align: center; padding: 2rem; color: var(--text-muted);">Loading matches...</div>`;
+
+      try {
+        const query = statusFilter !== "All" ? `?status=${statusFilter}` : "";
+        const matches = await apiFetch(`/matches${query}`);
+
+        if (matches.length === 0) {
+          container.innerHTML = `
+            <div class="empty-state">
+              <span class="empty-icon">🤝</span>
+              <h3>No ${statusFilter !== 'All' ? statusFilter.toLowerCase() : ''} matches right now</h3>
+              <p>When students submit lost and found reports with matching categories, names, or locations (&ge; 50%), they will appear here automatically.</p>
+              <div style="margin-top: 1rem; display: flex; justify-content: center; gap: 0.75rem;">
+                <a href="report-lost.html" class="btn btn-danger btn-sm">Report Lost Item</a>
+                <a href="report-found.html" class="btn btn-primary btn-sm">Report Found Item</a>
+              </div>
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = matches.map(match => {
+          const lost = match.lost_item || {};
+          const found = match.found_item || {};
+          const b = match.breakdown || {};
+
+          let badgeColor = "var(--warning-light)";
+          let textColor = "#92400e";
+          if (match.match_score >= 80) {
+            badgeColor = "#ecfdf5";
+            textColor = "#065f46";
+          }
+
+          const isPending = match.status === "Suggested";
+          const isConfirmed = match.status === "Confirmed";
+          const isRejected = match.status === "Rejected";
+
+          return `
+            <div id="match-card-${match.id}" class="match-card">
+              <!-- Top Match Header with Score -->
+              <div class="match-header">
+                <div>
+                  <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-subtle); text-transform: uppercase;">
+                    Match Case #${match.id}
+                  </div>
+                  <h2 style="font-size: 1.25rem; font-weight: 700; color: var(--text-main); margin-top: 0.2rem;">
+                    Possible Match Found!
+                  </h2>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                  <div class="match-score-badge" style="background-color: ${badgeColor}; color: ${textColor};">
+                    <span>🎯</span> Possible Match: ${match.match_score}%
+                  </div>
+                  <span class="badge ${isConfirmed ? 'badge-verified' : isRejected ? 'badge-resolved' : 'badge-possible-match'}">
+                    ${escapeHtml(match.status)}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Side-by-Side Comparison Grid -->
+              <div class="match-comparison-grid">
+                <!-- Lost Item Side -->
+                <div class="comparison-column lost-side">
+                  <div class="column-header lost-title">Lost Item (Report #${lost.id || '?'})</div>
+                  <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-main);">
+                    ${escapeHtml(lost.item_name || 'Lost Item')}
+                  </h3>
+                  <ul class="item-spec-list">
+                    <li><span class="spec-label">Category:</span> <strong>${escapeHtml(lost.category || 'N/A')}</strong></li>
+                    <li><span class="spec-label">Location:</span> <strong>📍 ${escapeHtml(lost.location || 'N/A')}</strong></li>
+                    <li><span class="spec-label">Date:</span> <strong>📅 ${escapeHtml(lost.date || 'N/A')}</strong></li>
+                    <li><span class="spec-label">Details:</span> ${escapeHtml(lost.description || 'No description provided.')}</li>
+                    ${isConfirmed ? `<li><span class="spec-label">Owner Contact:</span> <strong style="color:var(--primary);">${escapeHtml(lost.contact_info || 'Available')}</strong></li>` : ''}
+                  </ul>
+                  <div style="margin-top: 0.75rem;">
+                    <button class="btn btn-secondary btn-sm" onclick='showItemModal(${JSON.stringify(lost)})'>[View Details]</button>
+                  </div>
+                </div>
+
+                <!-- Found Item Side -->
+                <div class="comparison-column found-side">
+                  <div class="column-header found-title">Found Item (Report #${found.id || '?'})</div>
+                  <h3 style="font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-main);">
+                    ${escapeHtml(found.item_name || 'Found Item')}
+                  </h3>
+                  <ul class="item-spec-list">
+                    <li><span class="spec-label">Category:</span> <strong>${escapeHtml(found.category || 'N/A')}</strong></li>
+                    <li><span class="spec-label">Location:</span> <strong>📍 ${escapeHtml(found.location || 'N/A')}</strong></li>
+                    <li><span class="spec-label">Date:</span> <strong>📅 ${escapeHtml(found.date || 'N/A')}</strong></li>
+                    <li><span class="spec-label">Details:</span> ${escapeHtml(found.description || 'No description provided.')}</li>
+                    ${isConfirmed ? `<li><span class="spec-label">Finder Contact:</span> <strong style="color:var(--primary);">${escapeHtml(found.contact_info || 'Available')}</strong></li>` : ''}
+                  </ul>
+                  <div style="margin-top: 0.75rem;">
+                    <button class="btn btn-secondary btn-sm" onclick='showItemModal(${JSON.stringify(found)})'>[View Details]</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Explainable Score Breakdown -->
+              <div class="score-breakdown-box">
+                <div class="breakdown-title">
+                  <span>Explainable Algorithm Score Breakdown:</span>
+                  <span style="font-weight: 700; color: var(--primary);">Total: ${match.match_score} / 100 Pts</span>
+                </div>
+                <div class="breakdown-chips">
+                  <div class="score-chip">Category: <span class="pts">+${b.category_points ?? 0}/30</span></div>
+                  <div class="score-chip">Item Name: <span class="pts">+${b.name_points ?? 0}/25</span></div>
+                  <div class="score-chip">Location: <span class="pts">+${b.location_points ?? 0}/20</span></div>
+                  <div class="score-chip">Date: <span class="pts">+${b.date_points ?? 0}/15</span></div>
+                  <div class="score-chip">Description: <span class="pts">+${b.description_points ?? 0}/10</span></div>
+                </div>
+                ${b.explanations && b.explanations.length > 0 ? `
+                  <ul class="breakdown-explanations">
+                    ${b.explanations.map(exp => `<li>${escapeHtml(exp)}</li>`).join('')}
+                  </ul>
+                ` : ''}
+              </div>
+
+              <!-- Action Buttons (Confirm / Reject) -->
+              <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-subtle); padding-top: 1rem; flex-wrap: wrap; gap: 0.75rem;">
+                <div style="font-size: 0.85rem; color: var(--text-muted);">
+                  ${isConfirmed 
+                    ? `<span style="color: var(--success); font-weight: 700;">✅ Match verified! Contact information unlocked above.</span>` 
+                    : isRejected 
+                    ? `<span style="color: var(--text-subtle);">❌ Marked as Not a Match. Items remain active.</span>` 
+                    : `Please verify whether these two reports describe the identical campus belonging.`
+                  }
+                </div>
+
+                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                  ${isPending ? `
+                    <button class="btn btn-outline-danger btn-sm" onclick="handleReject(${match.id})">
+                      [Not a Match]
+                    </button>
+                    <button id="confirm-btn-${match.id}" class="btn btn-success btn-sm" onclick="handleConfirm(${match.id}, '${escapeHtml(lost.item_name)}', '${escapeHtml(found.item_name)}')">
+                      ✅ [Confirm Match]
+                    </button>
+                  ` : isConfirmed ? `
+                    <button class="btn btn-secondary btn-sm" onclick="handleResolveBoth(${lost.id}, ${found.id})">
+                      Mark as Resolved / Handed Over
+                    </button>
+                  ` : `
+                    <button class="btn btn-secondary btn-sm" onclick="handleConfirm(${match.id}, '${escapeHtml(lost.item_name)}', '${escapeHtml(found.item_name)}')">
+                      Re-open &amp; Confirm Match
+                    </button>
+                  `}
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        if (highlightId) {
+          setTimeout(() => {
+            const card = document.getElementById(`match-card-${highlightId}`);
+            if (card) {
+              card.scrollIntoView({ behavior: "smooth", block: "center" });
+              card.style.boxShadow = "0 0 0 3px #10b981";
+              setTimeout(() => { card.style.boxShadow = ""; }, 3500);
+            }
+          }, 100);
+        }
+
+      } catch (err) {
+        container.innerHTML = `
+          <div class="alert alert-danger">
+            Error loading matches: ${escapeHtml(err.message)}
+          </div>
+        `;
+      }
+    }
+
+    function handleConfirm(matchId, lostName, foundName) {
+      showCustomConfirm({
+        title: "Confirm Campus Match",
+        message: `Are you sure these two reports refer to the same belonging (${lostName || 'Lost Item'} and ${foundName || 'Found Item'})? This will verify both reports as matched and unlock contact details.`,
+        confirmText: "Yes, Confirm Match",
+        confirmClass: "btn-success",
+        onConfirm: async () => {
+          const btn = document.getElementById(`confirm-btn-${matchId}`);
+          if (btn) {
+            btn.disabled = true;
+            btn.textContent = "Confirming...";
+          }
+
+          try {
+            const res = await apiFetch(`/matches/${matchId}/confirm`, { method: "POST" });
+            showToast("🎉 Match successfully verified! Contact details unlocked.");
+
+            // If user is filtering by 'Suggested', flip to 'All' so the confirmed card stays visible
+            const statusFilter = document.getElementById("filter-match-status");
+            if (statusFilter && statusFilter.value === "Suggested") {
+              statusFilter.value = "All";
+            }
+            await loadMatches(matchId);
+          } catch (err) {
+            showToast("Failed to confirm match: " + err.message, "danger");
+            if (btn) {
+              btn.disabled = false;
+              btn.textContent = "✅ [Confirm Match]";
+            }
+          }
+        }
+      });
+    }
+
+    function handleReject(matchId) {
+      showCustomConfirm({
+        title: "Mark as Not a Match",
+        message: "Mark this pairing as 'Not a Match'? Both items will remain open for other potential matches.",
+        confirmText: "Yes, Not a Match",
+        confirmClass: "btn-outline-danger",
+        onConfirm: async () => {
+          try {
+            await apiFetch(`/matches/${matchId}/reject`, { method: "POST" });
+            showToast("Match marked as Not a Match.");
+            loadMatches();
+          } catch (err) {
+            showToast("Failed to reject match: " + err.message, "danger");
+          }
+        }
+      });
+    }
+
+    function handleResolveBoth(lostId, foundId) {
+      showCustomConfirm({
+        title: "Mark Belongings as Resolved",
+        message: "Has the owner received their item? This will mark both reports as Resolved and close the case.",
+        confirmText: "Yes, Mark Resolved",
+        confirmClass: "btn-success",
+        onConfirm: async () => {
+          try {
+            if (lostId) await apiFetch(`/items/${lostId}/resolve`, { method: "POST", body: JSON.stringify({ status: "Resolved" }) });
+            if (foundId) await apiFetch(`/items/${foundId}/resolve`, { method: "POST", body: JSON.stringify({ status: "Resolved" }) });
+            showToast("Cases marked as Resolved!");
+            loadMatches();
+          } catch (err) {
+            showToast("Failed to resolve items: " + err.message, "danger");
+          }
+        }
+      });
+    }
+
+    // Handle deep-link query parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const targetMatchId = urlParams.get("match_id");
+    const targetItemId = urlParams.get("item_id");
+
+    if (targetMatchId || targetItemId) {
+      document.getElementById("filter-match-status").value = "All";
+    }
+
+    loadMatches(targetMatchId);
+  </script>
+</body>
+</html>

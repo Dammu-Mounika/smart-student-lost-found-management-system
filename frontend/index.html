@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Student Lost & Found Management System</title>
+  <meta name="description" content="Centralized college campus lost and found management system with explainable smart matching.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="navbar"></header>
+
+  <main class="main-content">
+    <!-- Hero Section -->
+    <section class="hero-section">
+      <div class="hero-pill">🎓 Official Campus Student Services</div>
+      <h1 class="hero-title">Smart Student Lost &amp; Found<br>Management System</h1>
+      <p class="hero-desc">
+        A centralized, transparent campus platform to report misplaced belongings, track recovered items, and automatically discover explainable smart matches across all departments.
+      </p>
+
+      <div class="hero-actions">
+        <a href="report-lost.html" class="btn btn-danger btn-lg">
+          <span>🔍</span> Report Lost Item
+        </a>
+        <a href="report-found.html" class="btn btn-primary btn-lg">
+          <span>🎁</span> Report Found Item
+        </a>
+        <a href="search.html" class="btn btn-secondary btn-lg">
+          <span>⚡</span> Search Items
+        </a>
+        <a href="dashboard.html" class="btn btn-secondary btn-lg">
+          <span>📋</span> View My Reports
+        </a>
+      </div>
+
+      <!-- Quick Search Bar -->
+      <form action="search.html" method="GET" style="margin-top: 1.5rem; max-width: 600px; margin-left: auto; margin-right: auto; display: flex; gap: 0.5rem;">
+        <input type="text" name="q" class="form-control" placeholder="Search lost & found items (e.g. Dell bag, ID Card, Casio, Keys)..." style="background: var(--bg-card); font-size: 0.95rem; padding: 0.75rem 1rem;">
+        <button type="submit" class="btn btn-primary" style="white-space: nowrap; padding: 0 1.25rem;">Search</button>
+      </form>
+
+      <!-- Dynamic Auth Status Banner -->
+      <div id="home-auth-banner" style="margin-top: 2rem; max-width: 720px; margin-left: auto; margin-right: auto;"></div>
+    </section>
+
+    <!-- Campus Live Stats -->
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="stat-icon lost">🚨</div>
+        <div>
+          <div class="stat-label">Lost Reports</div>
+          <div id="stat-lost" class="stat-number">--</div>
+        </div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-icon found">📦</div>
+        <div>
+          <div class="stat-label">Found Reports</div>
+          <div id="stat-found" class="stat-number">--</div>
+        </div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-icon match">🤝</div>
+        <div>
+          <div class="stat-label">Possible Matches</div>
+          <div id="stat-matches" class="stat-number">--</div>
+        </div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-icon resolved">✅</div>
+        <div>
+          <div class="stat-label">Resolved Cases</div>
+          <div id="stat-resolved" class="stat-number">--</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Campus Reports -->
+    <div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-end;">
+      <div>
+        <h2 class="page-title" style="font-size: 1.45rem;">Recent Campus Activity</h2>
+        <p class="page-subtitle">Belongings recently reported lost or found across campus buildings.</p>
+      </div>
+      <a href="search.html" class="btn btn-secondary btn-sm">View All in Search &rarr;</a>
+    </div>
+
+    <div id="recent-items-container" class="items-grid">
+      <div style="grid-column: 1/-1; text-align: center; padding: 2rem; color: var(--text-muted);">
+        Loading campus items...
+      </div>
+    </div>
+  </main>
+
+  <script src="js/app.js"></script>
+  <script>
+    renderHeader('home');
+    renderFooter();
+
+    function renderHomeAuthBanner() {
+      const banner = document.getElementById("home-auth-banner");
+      if (!banner) return;
+      const user = AppState.currentUser;
+
+      if (user) {
+        banner.innerHTML = `
+          <div style="background: var(--bg-surface); border: 1px solid #bfdbfe; padding: 0.85rem 1.25rem; border-radius: var(--radius-md); box-shadow: var(--shadow-sm); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; text-align: left;">
+              <span style="font-size: 1.2rem;">🎓</span>
+              <div>
+                <div style="font-weight: 600; font-size: 0.95rem; color: var(--primary);">Signed in as ${escapeHtml(user.name)}</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted);">${escapeHtml(user.email)} &bull; Student ID #${user.id}</div>
+              </div>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+              <a href="dashboard.html" class="btn btn-primary btn-sm">Open My Dashboard &rarr;</a>
+              <button class="btn btn-secondary btn-sm" onclick="AppState.logout()">Sign Out</button>
+            </div>
+          </div>
+        `;
+      } else {
+        banner.innerHTML = `
+          <div style="background: var(--bg-surface); border: 1px solid var(--border-subtle); padding: 0.85rem 1.25rem; border-radius: var(--radius-md); box-shadow: var(--shadow-sm); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+            <div style="text-align: left;">
+              <div style="font-weight: 600; font-size: 0.95rem; color: var(--text-main);">Campus Student &amp; Staff Portal</div>
+              <div style="font-size: 0.85rem; color: var(--text-muted);">Sign in or create an account to track your submitted reports and verify item matches.</div>
+            </div>
+            <div style="display: flex; gap: 0.5rem;">
+              <a href="login.html" class="btn btn-secondary btn-sm">Sign In</a>
+              <a href="register.html" class="btn btn-primary btn-sm">Create Account</a>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    async function loadHomeData() {
+      renderHomeAuthBanner();
+      try {
+        // Load statistics
+        const stats = await apiFetch("/stats");
+        document.getElementById("stat-lost").textContent = stats.my_lost_reports;
+        document.getElementById("stat-found").textContent = stats.my_found_reports;
+        document.getElementById("stat-matches").textContent = stats.possible_matches;
+        document.getElementById("stat-resolved").textContent = stats.resolved_cases;
+
+        // Load recent items
+        const items = await apiFetch("/items?limit=6");
+        const container = document.getElementById("recent-items-container");
+
+        if (items.length === 0) {
+          container.innerHTML = `
+            <div class="empty-state" style="grid-column: 1/-1;">
+              <span class="empty-icon">📭</span>
+              <h3>No items reported yet</h3>
+              <p>Be the first to report a lost or found item on campus.</p>
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = items.map(item => {
+          const isLost = item.item_type === "lost";
+          const typeBadge = isLost 
+            ? `<span class="badge badge-lost">Lost</span>` 
+            : `<span class="badge badge-found">Found</span>`;
+
+          let statusClass = "badge-resolved";
+          if (item.status === "Lost") statusClass = "badge-lost";
+          if (item.status === "Found") statusClass = "badge-found";
+          if (item.status === "Possible Match") statusClass = "badge-possible-match";
+          if (item.status === "Match Verified") statusClass = "badge-verified";
+
+          return `
+            <div class="card">
+              <div class="card-header">
+                <div>
+                  <div style="display:flex; gap:0.4rem; margin-bottom:0.35rem;">
+                    ${typeBadge}
+                    <span class="badge ${statusClass}">${escapeHtml(item.status)}</span>
+                  </div>
+                  <h3 class="card-title">${escapeHtml(item.item_name)}</h3>
+                </div>
+              </div>
+
+              <div class="card-meta">
+                <span class="meta-item">📁 ${escapeHtml(item.category)}</span>
+                <span class="meta-item">📍 ${escapeHtml(item.location)}</span>
+                <span class="meta-item">📅 ${escapeHtml(item.date)}</span>
+              </div>
+
+              <p class="card-description">
+                ${escapeHtml(item.description.length > 110 ? item.description.slice(0, 110) + '...' : item.description)}
+              </p>
+
+              <div class="card-footer">
+                <span style="font-size:0.8rem; color:var(--text-subtle);">Report #${item.id}</span>
+                <button class="btn btn-secondary btn-sm" onclick='showItemModal(${JSON.stringify(item)})'>
+                  View Details
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+      } catch (err) {
+        console.error("Failed to load home data:", err);
+      }
+    }
+
+    loadHomeData();
+  </script>
+</body>
+</html>
