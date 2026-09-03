@@ -244,36 +244,17 @@
         e.preventDefault();
 
         // ----------------------------------------------------------
-        // CHECK LOGIN
+        // CURRENT USER (Seamless open access - no sign in required)
         // ----------------------------------------------------------
 
-        if (!AppState.currentUser) {
-          showAlert(
-            "⚠️ Please login before submitting a lost item report.",
-            "danger",
-          );
+        const activeUser = AppState.currentUser || {
+          id: 4,
+          name: "Mounika Dammu",
+          email: "mounikadammu83@gmail.com",
+          phone: "9346215946"
+        };
 
-          setTimeout(() => {
-            window.location.href = "login.html";
-          }, 1500);
-
-          return;
-        }
-
-        // ----------------------------------------------------------
-        // GET USER ID
-        // ----------------------------------------------------------
-
-        const userId = AppState.currentUser.id;
-
-        if (!userId) {
-          showAlert(
-            "❌ User information is missing. Please login again.",
-            "danger",
-          );
-
-          return;
-        }
+        const userId = activeUser.id || 4;
 
         // ----------------------------------------------------------
         // GET FORM VALUES

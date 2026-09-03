@@ -20,39 +20,52 @@ const AppState = {
       } catch (error) {
         console.error("Invalid saved user:", error);
         this.currentUser = null;
-        localStorage.removeItem("lost_found_user");
       }
-    } else {
-      this.currentUser = null;
+    }
+
+    // Always maintain an active student profile so no sign-in is ever required!
+    if (!this.currentUser) {
+      this.currentUser = {
+        id: 4,
+        name: "Mounika Dammu",
+        email: "mounikadammu83@gmail.com",
+        phone: "9346215946"
+      };
+      localStorage.setItem("lost_found_user", JSON.stringify(this.currentUser));
     }
 
     return this.currentUser;
   },
 
   setUser(user) {
-    this.currentUser = user;
-
     if (user) {
+      this.currentUser = user;
       localStorage.setItem("lost_found_user", JSON.stringify(user));
     } else {
-      localStorage.removeItem("lost_found_user");
+      // Default to active student profile instead of locking out
+      this.currentUser = {
+        id: 4,
+        name: "Mounika Dammu",
+        email: "mounikadammu83@gmail.com",
+        phone: "9346215946"
+      };
+      localStorage.setItem("lost_found_user", JSON.stringify(this.currentUser));
     }
 
     this.updateNav();
   },
 
   logout() {
-    const previousName = this.currentUser ? this.currentUser.name : "";
+    // Switch to Guest Student mode without forcing a login screen
+    this.setUser({
+      id: 1,
+      name: "Guest Student",
+      email: "guest@college.edu",
+      phone: "9876543210"
+    });
 
-    this.setUser(null);
-
-    showToast(
-      previousName ? `Signed out ${previousName}` : "Signed out successfully",
-    );
-
-    setTimeout(() => {
-      window.location.href = "login.html";
-    }, 400);
+    showToast("Active profile: Guest Student (Open Access)");
+    this.updateNav();
   },
 
   updateNav() {
@@ -62,67 +75,40 @@ const AppState = {
       return;
     }
 
-    if (this.currentUser) {
-      authGroup.innerHTML = `
-        <div style="
-          display:flex;
-          align-items:center;
-          gap:0.65rem;
-        ">
-          <a
-            href="dashboard.html"
-            title="View Student Dashboard"
-            style="
-              font-weight:600;
-              color:var(--primary);
-              display:inline-flex;
-              align-items:center;
-              gap:0.4rem;
-              padding:0.35rem 0.75rem;
-              background:var(--primary-light);
-              border-radius:var(--radius-md);
-              font-size:0.88rem;
-              border:1px solid #dbeafe;
-              text-decoration:none;
-            "
-          >
-            <span>👤</span>
-            <span>${escapeHTML(this.currentUser.name)}</span>
-          </a>
+    const user = this.currentUser || {
+      id: 4,
+      name: "Mounika Dammu",
+      email: "mounikadammu83@gmail.com"
+    };
 
-          <button
-            id="logout-btn"
-            class="btn btn-secondary btn-sm"
-            onclick="AppState.logout()"
-            title="Sign out of current account"
-          >
-            Sign Out
-          </button>
-        </div>
-      `;
-    } else {
-      authGroup.innerHTML = `
-        <div style="
-          display:flex;
-          align-items:center;
-          gap:0.5rem;
-        ">
-          <a
-            href="login.html"
-            class="btn btn-secondary btn-sm"
-          >
-            Sign In
-          </a>
-
-          <a
-            href="register.html"
-            class="btn btn-primary btn-sm"
-          >
-            Register
-          </a>
-        </div>
-      `;
-    }
+    authGroup.innerHTML = `
+      <div style="
+        display:flex;
+        align-items:center;
+        gap:0.5rem;
+      ">
+        <a
+          href="dashboard.html"
+          title="Active Student Profile - Click to view Dashboard"
+          style="
+            font-weight:600;
+            color:var(--primary);
+            display:inline-flex;
+            align-items:center;
+            gap:0.4rem;
+            padding:0.35rem 0.75rem;
+            background:var(--primary-light);
+            border-radius:var(--radius-md);
+            font-size:0.85rem;
+            border:1px solid #dbeafe;
+            text-decoration:none;
+          "
+        >
+          <span>👤</span>
+          <span>${escapeHTML(user.name)}</span>
+        </a>
+      </div>
+    `;
   },
 };
 

@@ -118,7 +118,7 @@
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; background: #f8fafc; border: 1px solid var(--border-subtle); padding: 0.6rem 1rem; border-radius: var(--radius-md); margin-bottom: 1.5rem;">
           <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
             <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);">
-              ${current ? 'Active Student Account:' : 'Quick Sign In as Demo Student:'}
+              Active Student Profile:
             </span>
             ${allUsers.map(u => {
               const isCurrent = current && Number(u.id) === Number(current.id);
@@ -136,14 +136,8 @@
             }).join('')}
           </div>
           <div style="display: flex; gap: 0.5rem; align-items: center;">
-            ${current ? `
-              <button class="btn btn-secondary btn-sm" onclick="AppState.logout()" style="font-size: 0.8rem; padding: 0.25rem 0.6rem;">
-                Sign Out
-              </button>
-            ` : `
-              <a href="login.html" class="btn btn-primary btn-sm" style="font-size: 0.8rem; padding: 0.25rem 0.65rem;">Sign In</a>
-              <a href="register.html" class="btn btn-secondary btn-sm" style="font-size: 0.8rem; padding: 0.25rem 0.65rem;">Register</a>
-            `}
+            <a href="report-lost.html" class="btn btn-primary btn-sm" style="font-size: 0.8rem; padding: 0.25rem 0.65rem;">+ Report Lost</a>
+            <a href="report-found.html" class="btn btn-secondary btn-sm" style="font-size: 0.8rem; padding: 0.25rem 0.65rem;">+ Report Found</a>
           </div>
         </div>
       `;
@@ -153,15 +147,23 @@
       const target = allUsers.find(u => Number(u.id) === Number(userId));
       if (target) {
         AppState.setUser(target);
-        showToast(`Switched account to ${target.name}`);
+        showToast(`Active profile: ${target.name}`);
         renderUserSwitcher();
         loadDashboard();
       }
     }
 
     async function loadDashboard() {
-      AppState.initUser();
-      const user = AppState.currentUser;
+      let user = AppState.initUser();
+      if (!user) {
+        user = {
+          id: 4,
+          name: "Mounika Dammu",
+          email: "mounikadammu83@gmail.com",
+          phone: "9346215946"
+        };
+        AppState.setUser(user);
+      }
       const notice = document.getElementById("dashboard-match-notice");
 
       if (!user) {
