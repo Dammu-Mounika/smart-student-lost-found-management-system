@@ -134,7 +134,10 @@ AppState.initUser();
 // ============================================================
 
 async function apiFetch(endpoint, options = {}) {
-  const url = `http://127.0.0.1:8000${endpoint}`;
+  const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  const url = cleanEndpoint.startsWith("/api/") || cleanEndpoint === "/api"
+    ? cleanEndpoint
+    : `/api${cleanEndpoint}`;
 
   console.log("API Request:", {
     method: options.method || "GET",
@@ -157,7 +160,7 @@ async function apiFetch(endpoint, options = {}) {
     console.error("Network error:", error);
 
     throw new Error(
-      "Cannot connect to FastAPI server. Make sure the backend is running on http://127.0.0.1:8000",
+      "Cannot connect to server. Please check your network connection and try again.",
     );
   }
 

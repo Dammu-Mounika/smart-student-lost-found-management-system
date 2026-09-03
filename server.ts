@@ -504,7 +504,7 @@ app.post("/api/items/lost", (req, res) => {
       return res.status(400).json({ detail: "All core fields (category, item name, description, location, date) are required." });
     }
 
-    let userId = Number(user_id) || 1;
+    let userId = Number(user_id) || Number(req.query.user_id) || 1;
     let studentUser: any = null;
 
     if (email && typeof email === "string" && email.trim()) {
@@ -563,7 +563,7 @@ app.post("/api/items/found", (req, res) => {
       return res.status(400).json({ detail: "All core fields (category, item name, description, location, date) are required." });
     }
 
-    let userId = Number(user_id) || 1;
+    let userId = Number(user_id) || Number(req.query.user_id) || 1;
     let finderUser: any = null;
 
     if (email && typeof email === "string" && email.trim()) {
@@ -625,7 +625,8 @@ app.get("/api/items", (req, res) => {
     if (category && category !== "All") {
       sql += ` AND category = '${String(category).replace(/'/g, "''")}'`;
     }
-    sql += " ORDER BY id DESC LIMIT 50;";
+    const limit = Math.max(1, Math.min(100, Number(req.query.limit) || 50));
+    sql += ` ORDER BY id DESC LIMIT ${limit};`;
 
     const items = queryAll(sql);
     res.json(items);
@@ -990,7 +991,9 @@ app.post("/api/match-calculator", (req, res) => {
 });
 
 // Serve frontend static files
-const frontendDir = path.join(process.cwd(), "frontend");
+const frontendDir = fs.existsSync(path.join(process.cwd(), "frontend"))
+  ? path.join(process.cwd(), "frontend")
+  : path.join(__dirname, "frontend");
 app.use(express.static(frontendDir));
 
 // Fallback to frontend/index.html for any direct web page requests
